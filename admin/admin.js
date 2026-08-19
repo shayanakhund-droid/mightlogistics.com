@@ -61,7 +61,9 @@ async function loadQuotes(){
   const { data, error } = await db.from('quote_requests').select('*').order('created_at',{ascending:false});
   if(error){ console.error(error); $('quoteRows').innerHTML='<tr><td colspan="7" class="empty">Could not load quote requests.</td></tr>'; return; }
   quotes=data||[];
+  window.quotes=quotes;
   renderStats(); renderRows();
+  if(typeof window.refreshMightDashboard==='function')window.refreshMightDashboard();
 }
 function renderStats(){
   const count=s=>quotes.filter(q=>q.status===s).length;
