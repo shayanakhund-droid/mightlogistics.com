@@ -1,0 +1,30 @@
+name: Load carrier ratings script
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  inject:
+    if: ${{ !contains(github.event.head_commit.message, 'chore: wire carrier ratings script') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wire ratings script into admin portal
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('admin/index.html')
+          text = p.read_text()
+          tag = '<script src="ratings.js?v=1"></script>'
+          if tag not in text:
+              text = text.replace('</body>', f'{tag}</body>')
+              p.write_text(text)
+      - name: Commit portal wiring
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add admin/index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'chore: wire carrier ratings script'
+          git push
