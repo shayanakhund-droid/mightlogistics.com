@@ -10,7 +10,7 @@
   <link href="https://fonts.gstatic.com">
   <link rel="stylesheet" href="admin.css?v=6">
   <link rel="stylesheet" href="quote.css?v=1">
-  <link rel="stylesheet" href="loads.css?v=1">
+  <link rel="stylesheet" href="loads.css?v=2">
 </head>
 <body>
   <div id="loginView" class="login-view">
@@ -128,17 +128,18 @@
           <label>Pieces<input id="load_pieces" type="number" min="0"></label>
           <label>Customer Rate<input id="load_customerRate" type="number" min="0" step="0.01"></label>
           <label>Carrier Rate<input id="load_carrierRate" type="number" min="0" step="0.01"></label>
-          <div class="loads-form-section"><h4>Carrier / Driver</h4></div>
-          <label>Carrier Name<input id="load_carrierName"></label>
-          <label>Carrier MC<input id="load_carrierMc"></label>
+          <div class="loads-form-section"><h4>Carrier / Driver Assignment</h4><p class="loads-section-note">Enter the carrier and driver information here. The load remains editable as the shipment moves through operations.</p></div>
+          <label>Carrier Name<input id="load_carrierName" placeholder="Carrier legal name"></label>
+          <label>Carrier MC<input id="load_carrierMc" placeholder="MC-#######"></label>
           <label>Driver Name<input id="load_driverName"></label>
-          <label>Driver Phone<input id="load_driverPhone"></label>
+          <label>Driver Phone<input id="load_driverPhone" type="tel" placeholder="(201) 555-0123"></label>
           <label>Truck #<input id="load_truckNumber"></label>
           <label>Trailer #<input id="load_trailerNumber"></label>
+          <div class="loads-form-section"><h4>Load Economics</h4><div class="load-economics"><div><span>Customer Rate</span><strong id="loadEconomicsCustomer">$0.00</strong></div><div><span>Carrier Rate</span><strong id="loadEconomicsCarrier">$0.00</strong></div><div><span>Gross Profit</span><strong id="loadGrossMargin">$0.00</strong></div><div><span>Margin</span><strong id="loadMarginPercent">0.0%</strong></div></div></div>
           <label class="loads-full">Special Requirements<textarea id="load_specialRequirements"></textarea></label>
           <label class="loads-full">Internal Notes<textarea id="load_internalNotes"></textarea></label>
         </div>
-        <div class="loads-form-actions"><div id="loadSaveMessage" class="load-save-message"></div><button type="button" id="loadModalClose2" class="outline">Cancel</button><button type="submit" class="primary">Save Load</button></div>
+        <div class="loads-form-actions"><div id="loadSaveMessage" class="load-save-message"></div><button type="button" id="advanceLoadStatus" class="outline">Advance Status</button><button type="button" id="loadModalClose2" class="outline">Cancel</button><button type="submit" class="primary">Save Load</button></div>
       </form>
     </section>
   </div>
@@ -146,7 +147,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="admin.js?v=7"></script>
   <script src="customers.js?v=6"></script>
-  <script src="loads.js?v=1"></script>
+  <script src="loads.js?v=2"></script>
   <script src="quote-fixes.js?v=2"></script>
   <script>document.getElementById('loadModalClose2')?.addEventListener('click',()=>document.getElementById('loadModal')?.classList.add('hidden'));</script>
 </body>
