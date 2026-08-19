@@ -24,12 +24,42 @@ const crmDb = window.supabase.createClient(CRM_URL, CRM_KEY);
   async function loadCRM(){
     const rows = $('customerRows'); if(!rows) return;
     rows.innerHTML = '<tr><td colspan="7" class="empty">Loading customers…</td></tr>';
-    const [cRes,qRes] = await Promise.all([
-      crmDb.from('customers').select('*').order('updated_at',{ascending:false}),
-      crmDb.from('quote_requests').select('id,quote_number,customer_id,company_name,origin,destination,pickup_date,status,created_at').order('created_at',{ascending:false})
-    ]);
-    if(cRes.error || qRes.error){ console.error(cRes.error || qRes.error); rows.innerHTML='<tr><td colspan="7" class="empty">Could not load customers. Refresh and try again.</td></tr>'; return; }
-    crmCustomers=cRes.data||[]; crmQuotes=qRes.data||[]; renderCustomers();
+
+    // Build the CRM list from quote_requests. This keeps the portal working even when
+    // the customers table has stricter RLS than the quote queue.
+    const {data, error} = await crmDb.from('quote_requests').select('id,quote_number,customer_id,customer_name,company_name,email,phone,origin,destination,pickup_date,status,created_at,updated_at,notes').order('created_at',{ascending:false});
+    if(error){
+      console.error('Customer CRM load error:', error);
+      rows.innerHTML='<tr><td colspan="7" class="empty">Could not load customers. Refresh and try again.</td></tr>';
+      return;
+    }
+
+    crmQuotes = data || [];
+    const map = new Map();
+    crmQuotes.forEach(q => {
+      const key = q.customer_id || (q.email ? `email:${String(q.email).toLowerCase()}` : `company:${String(q.company_name || '').toLowerCase()}`);
+      if(!map.has(key)){
+        map.set(key, {
+          id: q.customer_id || key,
+          company_name: q.company_name || 'Unnamed customer',
+          contact_name: q.customer_name || '—',
+          email: q.email || '',
+          phone: q.phone || '',
+          notes: q.notes || '',
+          created_at: q.created_at,
+          updated_at: q.updated_at || q.created_at,
+          derived: !q.customer_id
+        });
+      }
+    });
+    crmCustomers = Array.from(map.values());
+    renderCustomers();
+  }
+
+  function customerQuotes(c){
+    return crmQuotes.filter(q => c.derived
+      ? (!q.customer_id && String(q.email||'').toLowerCase() === String(c.email||'').toLowerCase())
+      : String(q.customer_id) === String(c.id));
   }
 
   function renderCustomers(){
@@ -38,7 +68,7 @@ const crmDb = window.supabase.createClient(CRM_URL, CRM_KEY);
     const filtered=crmCustomers.filter(c=>!term || [c.company_name,c.contact_name,c.email,c.phone].some(v=>String(v||'').toLowerCase().includes(term)));
     if(!filtered.length){rows.innerHTML='<tr><td colspan="7" class="empty">No customers match your search.</td></tr>';return;}
     rows.innerHTML=filtered.map(c=>{
-      const related=crmQuotes.filter(q=>q.customer_id===c.id);
+      const related=customerQuotes(c);
       const last=related[0]?.created_at || c.updated_at;
       return `<tr><td class="customer"><strong>${esc(c.company_name)}</strong><span>Added ${date(c.created_at)}</span></td><td>${esc(c.contact_name)}</td><td>${c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:'—'}</td><td>${c.phone?`<a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>`:'—'}</td><td><strong>${related.length}</strong></td><td>${dateTime(last)}</td><td><button class="outline crm-customer" data-id="${esc(c.id)}">View</button></td></tr>`;
     }).join('');
@@ -46,13 +76,12 @@ const crmDb = window.supabase.createClient(CRM_URL, CRM_KEY);
   }
 
   function openDrawer(){ const d=$('drawer'); d.classList.remove('hidden'); d.setAttribute('aria-hidden','false'); }
-  function closeDrawer(){ const d=$('drawer'); d.classList.add('hidden'); d.setAttribute('aria-hidden','true'); currentQuote=null; }
-
+  function closeDrawer(){ const d=$('drawer'); d.classList.add('hidden'); d.setAttribute('aria-hidden','true'); currentQuote=null; $('quoteActions')?.classList.remove('hidden'); $('drawerKicker').textContent='QUOTE REQUEST'; }
   function detail(label,value,full=false){return `<div class="detail-block ${full?'full':''}"><span>${label}</span><div>${value||'—'}</div></div>`;}
 
   function openCustomer(id){
-    const c=crmCustomers.find(x=>x.id===id); if(!c)return;
-    const related=crmQuotes.filter(q=>q.customer_id===c.id);
+    const c=crmCustomers.find(x=>String(x.id)===String(id)); if(!c)return;
+    const related=customerQuotes(c);
     $('drawerKicker').textContent='CUSTOMER PROFILE'; $('drawerTitle').textContent=c.company_name||'Customer'; $('quoteActions').classList.add('hidden');
     const history=related.length?related.map(q=>`<button class="history-row crm-history" data-id="${esc(q.id)}"><span><strong>${quoteNo(q.quote_number)}</strong><small>${esc(q.origin)} → ${esc(q.destination)}</small></span><span><b class="status ${esc(q.status)}">${esc(statusLabel(q.status))}</b><small>${date(q.pickup_date)}</small></span></button>`).join(''):'<div class="empty history-empty">No quotes yet.</div>';
     $('drawerBody').innerHTML=`<div class="customer-profile"><div class="profile-company">${esc(c.company_name)}</div><div class="profile-meta">Customer since ${date(c.created_at)}</div></div><div class="detail-grid customer-details">${detail('Primary contact',esc(c.contact_name))}${detail('Email',c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:'—')}${detail('Phone',c.phone?`<a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>`:'—')}${detail('Total quotes',`<strong>${related.length}</strong>`)}${detail('Internal notes',esc(c.notes),true)}</div><div class="history-heading"><div class="kicker">ACTIVITY</div><h4>Quote History</h4></div><div class="history-list">${history}</div>`;
@@ -62,7 +91,7 @@ const crmDb = window.supabase.createClient(CRM_URL, CRM_KEY);
 
   async function openQuote(id){
     const {data,error}=await crmDb.from('quote_requests').select('*').eq('id',id).maybeSingle();
-    if(error || !data){return;}
+    if(error || !data)return;
     currentQuote=data;
     $('drawerKicker').textContent='QUOTE REQUEST'; $('drawerTitle').textContent=quoteNo(data.quote_number); $('quoteActions').classList.remove('hidden'); $('detailStatus').value=data.status; $('internalNotes').value=data.internal_notes||''; $('saveMessage').textContent='';
     $('drawerBody').innerHTML=`<div class="detail-grid">${detail('Company',`<strong>${esc(data.company_name)}</strong>`)}${detail('Contact',`<strong>${esc(data.customer_name)}</strong>`)}${detail('Email',data.email?`<a href="mailto:${esc(data.email)}">${esc(data.email)}</a>`:'—')}${detail('Phone',data.phone?`<a href="tel:${esc(data.phone)}">${esc(data.phone)}</a>`:'—')}${detail('Origin',`<strong>${esc(data.origin)}</strong>`)}${detail('Destination',`<strong>${esc(data.destination)}</strong>`)}${detail('Pickup date',date(data.pickup_date))}${detail('Equipment',esc(data.equipment))}${detail('Commodity',esc(data.commodity))}${detail('Weight',data.weight_lbs?`${Number(data.weight_lbs).toLocaleString()} lbs`:'—')}${detail('Pieces',data.pieces?esc(data.pieces):'—')}${detail('Special requirements',esc(data.special_requirements),true)}${detail('Customer notes',esc(data.notes),true)}</div>`;
