@@ -128,7 +128,7 @@ function openQuote(id){
 function closeDrawer(){ $('drawer').classList.add('hidden'); $('drawer').setAttribute('aria-hidden','true'); selectedQuote=null; }
 
 async function saveQuote(){
-  if(!selectedQuote)return;
+  if(!selectedQuote)return false;
   $('saveMessage').textContent='Saving…';
   const carrier=Number($('carrierRate').value || 0);
   const customer=Number($('customerRate').value || 0);
@@ -141,10 +141,69 @@ async function saveQuote(){
     internal_notes:$('internalNotes').value.trim(),
     updated_at:new Date().toISOString()
   }).eq('id',selectedQuote.id);
-  if(error){ console.error(error); $('saveMessage').textContent='Could not save changes.'; return; }
+  if(error){ console.error(error); $('saveMessage').textContent='Could not save changes.'; return false; }
   $('saveMessage').textContent='Saved.';
   await loadQuotes();
   setTimeout(closeDrawer,650);
+  return true;
+}
+
+function previewData(){
+  if(!selectedQuote) return null;
+  const q={...selectedQuote};
+  q.customer_rate=Number($('customerRate').value || 0);
+  return q;
+}
+function buildQuoteDocument(q){
+  const rate=Number(q.customer_rate||0);
+  const notes=q.notes || 'Thank you for the opportunity to quote this shipment.';
+  return `<article class="quote-paper">
+    <header class="quote-paper-head">
+      <div class="quote-brand"><div class="brand-mark">M</div><div><strong>MIGHT LOGISTICS</strong><span>FREIGHT • CAPACITY • CONTROL</span></div></div>
+      <div class="quote-meta"><strong>${formatQuote(q.quote_number)}</strong><span>Issued ${formatDate(new Date().toISOString().slice(0,10))}</span></div>
+    </header>
+    <section class="quote-title"><div class="kicker">FREIGHT QUOTE</div><h1>Transportation Quote</h1></section>
+    <section class="quote-lane">
+      <div><span>Origin</span><strong>${esc(q.origin)}</strong></div>
+      <div class="arrow">→</div>
+      <div><span>Destination</span><strong>${esc(q.destination)}</strong></div>
+    </section>
+    <section class="quote-info-grid">
+      <div class="quote-info"><span>Customer</span><strong>${esc(q.company_name)}</strong></div>
+      <div class="quote-info"><span>Contact</span><strong>${esc(q.customer_name)}</strong></div>
+      <div class="quote-info"><span>Pickup Date</span><strong>${formatDate(q.pickup_date)}</strong></div>
+      <div class="quote-info"><span>Equipment</span><strong>${esc(q.equipment)}</strong></div>
+      <div class="quote-info"><span>Commodity</span><strong>${esc(q.commodity) || '—'}</strong></div>
+      <div class="quote-info"><span>Weight</span><strong>${q.weight_lbs ? `${Number(q.weight_lbs).toLocaleString('en-US')} lbs` : '—'}</strong></div>
+    </section>
+    <section class="quote-rate"><div><span>Total Transportation Rate</span><strong>${rate>0 ? money(rate) : 'Rate pending'}</strong></div><div class="kicker">USD</div></section>
+    <section class="quote-notes"><h4>Shipment Notes</h4><p>${esc(notes)}</p></section>
+    <section class="quote-terms">This quote is based on the shipment information provided and is subject to capacity, equipment availability, and final confirmation. Any changes to the shipment details may require a revised rate. Carrier cost, margin, and internal pricing information are confidential and are not included in this customer document.</section>
+  </article>`;
+}
+function openQuotePreview(){
+  const q=previewData();
+  if(!q)return;
+  if(q.customer_rate<=0){ $('saveMessage').textContent='Enter a customer rate before generating the quote.'; return; }
+  $('previewQuoteNumber').textContent=formatQuote(q.quote_number);
+  $('quotePreviewContent').innerHTML=buildQuoteDocument(q);
+  $('quotePreview').classList.remove('hidden');
+  $('quotePreview').setAttribute('aria-hidden','false');
+}
+function closeQuotePreview(){ $('quotePreview').classList.add('hidden'); $('quotePreview').setAttribute('aria-hidden','true'); }
+function printQuote(){ window.print(); }
+function emailQuote(){
+  const q=previewData(); if(!q || !q.email)return;
+  if(q.customer_rate<=0){ $('saveMessage').textContent='Enter a customer rate before emailing the quote.'; closeQuotePreview(); return; }
+  const subject=`Might Logistics Quote ${formatQuote(q.quote_number)} — ${q.origin} to ${q.destination}`;
+  const body=`Hello ${q.customer_name || ''},\n\nPlease find our transportation quote below.\n\nQuote: ${formatQuote(q.quote_number)}\nLane: ${q.origin} → ${q.destination}\nPickup: ${formatDate(q.pickup_date)}\nEquipment: ${q.equipment}\nRate: ${money(q.customer_rate)} USD\n\nPlease reply to confirm or if you have any questions.\n\nMight Logistics`;
+  window.location.href=`mailto:${encodeURIComponent(q.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+async function markQuoted(){
+  if(!selectedQuote)return;
+  $('detailStatus').value='quoted';
+  const ok=await saveQuote();
+  if(ok){ closeQuotePreview(); }
 }
 
 $('loginForm').addEventListener('submit',signIn);
@@ -155,7 +214,10 @@ $('statusFilter').addEventListener('change',renderRows);
 $('carrierRate').addEventListener('input',updatePricingPreview);
 $('customerRate').addEventListener('input',updatePricingPreview);
 $('drawerClose').addEventListener('click',closeDrawer); $('drawerX').addEventListener('click',closeDrawer); $('saveQuote').addEventListener('click',saveQuote);
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('drawer').classList.contains('hidden'))closeDrawer();});
+$('previewQuote').addEventListener('click',openQuotePreview);
+$('quotePreviewClose').addEventListener('click',closeQuotePreview); $('quotePreviewX').addEventListener('click',closeQuotePreview);
+$('printQuote').addEventListener('click',printQuote); $('emailQuote').addEventListener('click',emailQuote); $('markQuoted').addEventListener('click',markQuoted);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('quotePreview').classList.contains('hidden'))closeQuotePreview();else if(!$('drawer').classList.contains('hidden'))closeDrawer();}});
 
 db.auth.onAuthStateChange((_event)=>{ if(_event==='SIGNED_OUT') showLogin(); });
 boot();
