@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Might Logistics | Operations Portal</title>
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <div id="loginView" class="login-view">
+    <div class="login-card">
+      <div class="brand-mark">M</div>
+      <div class="eyebrow">MIGHT LOGISTICS</div>
+      <h1>Operations Portal</h1>
+      <p class="muted">Sign in to manage quote requests and brokerage operations.</p>
+      <form id="loginForm">
+        <label>Email<input id="email" type="email" autocomplete="username" required placeholder="you@mightlogistics.com"></label>
+        <label>Password<input id="password" type="password" autocomplete="current-password" required placeholder="••••••••"></label>
+        <button class="primary" type="submit">Sign In</button>
+        <div id="loginError" class="error" role="alert"></div>
+      </form>
+      <div class="login-foot">Authorized Might Logistics personnel only.</div>
+    </div>
+  </div>
+
+  <div id="appView" class="app hidden">
+    <aside class="sidebar">
+      <div class="side-brand"><div class="brand-mark small">M</div><div><strong>MIGHT</strong><span>LOGISTICS</span></div></div>
+      <div class="portal-label">OPERATIONS</div>
+      <nav>
+        <a class="active" href="#dashboard">Overview</a>
+        <a href="#quotes">Quote Requests</a>
+      </nav>
+      <div class="side-bottom">
+        <div class="user-mini"><div class="avatar" id="userAvatar">L</div><div><strong id="userName">Admin</strong><span id="userEmail"></span></div></div>
+        <button id="signOut" class="ghost">Sign out</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div><div class="eyebrow">MIGHT LOGISTICS</div><h2>Operations Dashboard</h2></div>
+        <div class="top-actions"><span class="status-dot"></span><span>System operational</span></div>
+      </header>
+
+      <section class="content" id="dashboard">
+        <div id="accessError" class="error banner"></div>
+        <div class="stats">
+          <div class="stat"><span>NEW</span><strong id="statNew">—</strong><small>Awaiting review</small></div>
+          <div class="stat"><span>REVIEWING</span><strong id="statReviewing">—</strong><small>Under review</small></div>
+          <div class="stat"><span>QUOTING</span><strong id="statQuoting">—</strong><small>Rate being prepared</small></div>
+          <div class="stat"><span>BOOKED</span><strong id="statBooked">—</strong><small>Converted shipments</small></div>
+        </div>
+
+        <section class="panel" id="quotes">
+          <div class="panel-head"><div><div class="kicker">WORK QUEUE</div><h3>Quote Requests</h3></div><div class="controls"><input id="search" type="search" placeholder="Search company, lane, quote #"><select id="statusFilter"><option value="all">All statuses</option><option value="new">New</option><option value="reviewing">Reviewing</option><option value="quoting">Quoting</option><option value="quoted">Quoted</option><option value="booked">Booked</option><option value="lost">Lost</option><option value="cancelled">Cancelled</option></select><button id="refresh" class="outline">Refresh</button></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Quote</th><th>Customer</th><th>Lane</th><th>Equipment</th><th>Pickup</th><th>Status</th><th></th></tr></thead><tbody id="quoteRows"><tr><td colspan="7" class="empty">Loading quote requests…</td></tr></tbody></table></div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div id="drawer" class="drawer hidden" aria-hidden="true">
+    <div class="drawer-backdrop" id="drawerClose"></div>
+    <aside class="drawer-panel">
+      <div class="drawer-head"><div><div class="kicker">QUOTE REQUEST</div><h3 id="drawerTitle">ML-00001</h3></div><button class="close" id="drawerX">×</button></div>
+      <div id="drawerBody" class="drawer-body"></div>
+      <div class="drawer-actions"><label>Status<select id="detailStatus"><option value="new">New</option><option value="reviewing">Reviewing</option><option value="quoting">Quoting</option><option value="quoted">Quoted</option><option value="booked">Booked</option><option value="lost">Lost</option><option value="cancelled">Cancelled</option></select></label><label>Internal notes<textarea id="internalNotes" rows="5" placeholder="Notes visible to the Might team only…"></textarea></label><button id="saveQuote" class="primary">Save Changes</button><div id="saveMessage" class="save-message"></div></div>
+    </aside>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="admin.js?v=1"></script>
+</body>
+</html>
