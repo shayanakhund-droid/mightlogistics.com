@@ -61,6 +61,12 @@
       }
     },500);
     populateCarrierSelect();
+    if(!document.querySelector('script[data-might-ratecon]')){
+      const script=document.createElement('script');
+      script.src='ratecon.js?v=1';
+      script.dataset.mightRatecon='1';
+      document.body.appendChild(script);
+    }
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
