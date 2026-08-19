@@ -26,29 +26,35 @@ form.addEventListener('submit', async (event) => {
   if (document.getElementById('website').value.trim() !== '') return;
 
   const data = Object.fromEntries(new FormData(form).entries());
-  delete data.website;
 
-  if (data.weight_lbs === '') data.weight_lbs = null;
-  else data.weight_lbs = Number(data.weight_lbs);
-
-  if (data.pieces === '') data.pieces = null;
-  else data.pieces = Number(data.pieces);
-
-  if (data.pickup_date === '') data.pickup_date = null;
+  const weightLbs = data.weight_lbs === '' ? null : Number(data.weight_lbs);
+  const pieces = data.pieces === '' ? null : Number(data.pieces);
+  const pickupDate = data.pickup_date === '' ? null : data.pickup_date;
 
   submitButton.disabled = true;
   submitButton.textContent = 'Submitting…';
 
   try {
-    const { data: quote, error } = await client
-      .from('quote_requests')
-      .insert([data])
-      .select('quote_number')
-      .single();
+    // Use the locked-down database function rather than exposing table reads/writes.
+    const { data: quoteNumber, error } = await client.rpc('submit_quote_request', {
+      p_customer_name: data.customer_name,
+      p_company_name: data.company_name,
+      p_email: data.email,
+      p_phone: data.phone || null,
+      p_origin: data.origin,
+      p_destination: data.destination,
+      p_pickup_date: pickupDate,
+      p_equipment: data.equipment,
+      p_commodity: data.commodity || null,
+      p_weight_lbs: weightLbs,
+      p_pieces: pieces,
+      p_special_requirements: data.special_requirements || null,
+      p_notes: data.notes || null
+    });
 
     if (error) throw error;
 
-    const reference = `ML-${String(quote.quote_number).padStart(5, '0')}`;
+    const reference = `ML-${String(quoteNumber).padStart(5, '0')}`;
     window.location.href = `quote-success.html?ref=${encodeURIComponent(reference)}`;
   } catch (error) {
     console.error('Quote submission failed:', error);
