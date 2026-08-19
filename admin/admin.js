@@ -14,6 +14,7 @@ function esc(value) {
 function statusLabel(s){ return (s || '').replace(/_/g,' '); }
 function formatDate(v){ if(!v) return '—'; return new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric'}).format(new Date(v+'T00:00:00')); }
 function formatQuote(n){ return `ML-${String(n).padStart(5,'0')}`; }
+function money(v){ return Number(v || 0).toLocaleString('en-US',{style:'currency',currency:'USD'}); }
 
 async function getProfile(){
   const { data:{ user } } = await db.auth.getUser();
@@ -86,9 +87,27 @@ function renderRows(){
 }
 
 function detail(label,value,full=false){return `<div class="detail-block ${full?'full':''}"><span>${label}</span><div>${value||'—'}</div></div>`;}
+function updatePricingPreview(){
+  const carrier=Number($('carrierRate')?.value || 0);
+  const customer=Number($('customerRate')?.value || 0);
+  const margin=customer-carrier;
+  const percent=customer>0 ? (margin/customer)*100 : 0;
+  $('marginAmount').textContent=money(margin);
+  $('marginPercent').textContent=`${percent.toFixed(1)}%`;
+  const badge=$('marginBadge');
+  if(margin>0){ badge.textContent=`${percent.toFixed(1)}% margin`; badge.className='margin-badge positive'; }
+  else if(margin<0){ badge.textContent='Loss'; badge.className='margin-badge negative'; }
+  else { badge.textContent='Margin —'; badge.className='margin-badge'; }
+}
+function populatePricing(q){
+  $('carrierRate').value = q.carrier_rate ?? '';
+  $('customerRate').value = q.customer_rate ?? '';
+  updatePricingPreview();
+}
 function openQuote(id){
   selectedQuote=quotes.find(q=>q.id===id); if(!selectedQuote)return;
-  const q=selectedQuote; $('drawerTitle').textContent=formatQuote(q.quote_number); $('detailStatus').value=q.status; $('internalNotes').value=q.internal_notes||''; $('saveMessage').textContent='';
+  const q=selectedQuote; $('drawerTitle').textContent=formatQuote(q.quote_number); $('detailStatus').value=q.status || 'new'; $('internalNotes').value=q.internal_notes||''; $('saveMessage').textContent='';
+  populatePricing(q);
   $('drawerBody').innerHTML=`<div class="detail-grid">
     ${detail('Company',`<strong>${esc(q.company_name)}</strong>`)}
     ${detail('Contact',`<strong>${esc(q.customer_name)}</strong>`)}
@@ -111,7 +130,17 @@ function closeDrawer(){ $('drawer').classList.add('hidden'); $('drawer').setAttr
 async function saveQuote(){
   if(!selectedQuote)return;
   $('saveMessage').textContent='Saving…';
-  const { error }=await db.from('quote_requests').update({status:$('detailStatus').value,internal_notes:$('internalNotes').value.trim(),updated_at:new Date().toISOString()}).eq('id',selectedQuote.id);
+  const carrier=Number($('carrierRate').value || 0);
+  const customer=Number($('customerRate').value || 0);
+  const margin=customer-carrier;
+  const { error }=await db.from('quote_requests').update({
+    status:$('detailStatus').value,
+    carrier_rate: carrier || null,
+    customer_rate: customer || null,
+    margin: margin || null,
+    internal_notes:$('internalNotes').value.trim(),
+    updated_at:new Date().toISOString()
+  }).eq('id',selectedQuote.id);
   if(error){ console.error(error); $('saveMessage').textContent='Could not save changes.'; return; }
   $('saveMessage').textContent='Saved.';
   await loadQuotes();
@@ -123,6 +152,8 @@ $('signOut').addEventListener('click',async()=>{await db.auth.signOut();showLogi
 $('refresh').addEventListener('click',loadQuotes);
 $('search').addEventListener('input',renderRows);
 $('statusFilter').addEventListener('change',renderRows);
+$('carrierRate').addEventListener('input',updatePricingPreview);
+$('customerRate').addEventListener('input',updatePricingPreview);
 $('drawerClose').addEventListener('click',closeDrawer); $('drawerX').addEventListener('click',closeDrawer); $('saveQuote').addEventListener('click',saveQuote);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('drawer').classList.contains('hidden'))closeDrawer();});
 
