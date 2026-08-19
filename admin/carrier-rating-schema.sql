@@ -1,0 +1,1 @@
+-- Carrier ratings schema will be applied in Supabase.
