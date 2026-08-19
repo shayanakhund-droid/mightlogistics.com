@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="admin.css?v=4">
+  <link rel="stylesheet" href="admin.css?v=5">
 </head>
 <body>
   <div id="loginView" class="login-view">
@@ -77,12 +77,27 @@
     <aside class="drawer-panel">
       <div class="drawer-head"><div><div class="kicker" id="drawerKicker">QUOTE REQUEST</div><h3 id="drawerTitle">ML-00001</h3></div><button class="close" id="drawerX">×</button></div>
       <div id="drawerBody" class="drawer-body"></div>
-      <div id="quoteActions" class="drawer-actions"><label>Status<select id="detailStatus"><option value="new">New</option><option value="reviewing">Reviewing</option><option value="quoting">Quoting</option><option value="quoted">Quoted</option><option value="booked">Booked</option><option value="lost">Lost</option><option value="cancelled">Cancelled</option></select></label><label>Internal notes<textarea id="internalNotes" rows="5" placeholder="Notes visible to the Might team only…"></textarea></label><button id="saveQuote" class="primary">Save Changes</button><div id="saveMessage" class="save-message"></div></div>
+      <div id="quoteActions" class="drawer-actions">
+        <div class="pricing-card">
+          <div class="pricing-head"><div><div class="kicker">PRICING</div><h4>Quote Economics</h4></div><span id="marginBadge" class="margin-badge">Margin —</span></div>
+          <div class="pricing-grid">
+            <label>Carrier Rate<input id="carrierRate" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+            <label>Customer Rate<input id="customerRate" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+          </div>
+          <div class="pricing-summary">
+            <div><span>Gross Margin</span><strong id="marginAmount">$0.00</strong></div>
+            <div><span>Margin %</span><strong id="marginPercent">0.0%</strong></div>
+          </div>
+        </div>
+        <label>Status<select id="detailStatus"><option value="new">New</option><option value="reviewing">Reviewing</option><option value="quoting">Quoting</option><option value="quoted">Quoted</option><option value="booked">Booked</option><option value="lost">Lost</option><option value="cancelled">Cancelled</option></select></label>
+        <label>Internal notes<textarea id="internalNotes" rows="5" placeholder="Notes visible to the Might team only…"></textarea></label>
+        <button id="saveQuote" class="primary">Save Changes</button><div id="saveMessage" class="save-message"></div>
+      </div>
     </aside>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="admin.js?v=4"></script>
-  <script src="customers.js?v=4"></script>
+  <script src="admin.js?v=5"></script>
+  <script src="customers.js?v=5"></script>
 </body>
 </html>
