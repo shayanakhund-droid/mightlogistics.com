@@ -1,0 +1,1 @@
+Carrier ratings: one rating per carrier/load, overall + communication + performance + comment, visible on carrier list and load completion.
