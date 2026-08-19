@@ -1,61 +1,21 @@
 (function(){
   const db=window.mightDb;if(!db)return;
   const $=id=>document.getElementById(id);
-  const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
-  let ratings=[];
-  const stars=n=>'★★★★★'.split('').map((s,i)=>i<n?'★':'☆').join('');
+  let ratings=[],loads=[];
+  const stars=n=>Array.from({length:5},(_,i)=>i<n?'★':'☆').join('');
   const avgText=v=>v==null?'No ratings yet':`${Number(v).toFixed(1)} / 5`;
-
-  async function loadRatings(){
-    const {data,error}=await db.from('carrier_rating_summary').select('*');
-    if(!error) ratings=data||[];
-    renderCarrierRatings();
-  }
+  async function loadRatings(){const {data,error}=await db.from('carrier_rating_summary').select('*');if(!error)ratings=data||[];renderCarrierRatings();}
+  async function loadCompletedLoads(){const {data,error}=await db.from('loads').select('id,load_number,status,carrier_id,carrier_name').in('status',['delivered','invoiced','paid']);if(!error)loads=data||[];addRateButtons();}
   function summaryFor(id){return ratings.find(r=>String(r.carrier_id)===String(id));}
-  function renderCarrierRatings(){
-    const rows=$('carrierRows');if(!rows)return;
-    rows.querySelectorAll('tr').forEach(row=>{
-      const btn=row.querySelector('.carrier-view');if(!btn)return;
-      const s=summaryFor(btn.dataset.id);if(!s)return;
-      const company=row.querySelector('.customer');
-      if(company&&!company.querySelector('.carrier-rating')){
-        const el=document.createElement('span');el.className='carrier-rating';el.title=`${s.rating_count} completed load rating${s.rating_count===1?'':'s'}`;el.innerHTML=`<strong>${stars(Math.round(Number(s.average_rating)))}</strong> ${avgText(s.average_rating)} <small>(${s.rating_count})</small>`;company.appendChild(el);
-      }
-    });
-  }
-  function injectStyle(){
-    if($('carrierRatingStyle'))return;
-    const s=document.createElement('style');s.id='carrierRatingStyle';s.textContent='.carrier-rating{display:block;margin-top:4px;font-size:12px}.carrier-rating strong{letter-spacing:1px}.carrier-rating small{opacity:.65}.rating-modal{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center}.rating-modal.hidden{display:none}.rating-backdrop{position:absolute;inset:0;background:rgba(2,12,24,.55)}.rating-card{position:relative;width:min(520px,calc(100vw - 32px));background:#fff;border-radius:18px;padding:24px;box-shadow:0 25px 80px rgba(0,0,0,.25)}.rating-card h3{margin:0 0 4px}.rating-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}.rating-field label{display:block;font-weight:600;margin-bottom:7px}.rating-stars{display:flex;gap:4px}.rating-stars button{border:0;background:none;font-size:30px;cursor:pointer;padding:0}.rating-card textarea{width:100%;min-height:90px;box-sizing:border-box}.rating-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}';document.head.appendChild(s);
-  }
-  function ensureModal(){
-    if($('carrierRatingModal'))return;
-    const m=document.createElement('div');m.id='carrierRatingModal';m.className='rating-modal hidden';m.innerHTML='<div class="rating-backdrop"></div><section class="rating-card"><div class="kicker">CARRIER PERFORMANCE</div><h3 id="ratingCarrierName">Rate Carrier</h3><p class="muted">Rate this carrier after the load is completed. Your rating will be visible to the entire Might Logistics team.</p><div class="rating-grid"><div class="rating-field"><label>Overall</label><div id="ratingOverall" class="rating-stars"></div></div><div class="rating-field"><label>Communication</label><div id="ratingCommunication" class="rating-stars"></div></div><div class="rating-field"><label>Performance</label><div id="ratingPerformance" class="rating-stars"></div></div></div><label>Comments<textarea id="ratingComment" placeholder="How did the load go? Communication, reliability, issues, etc."></textarea></label><div id="ratingMessage" class="save-message"></div><div class="rating-actions"><button id="ratingCancel" class="outline">Cancel</button><button id="ratingSave" class="primary">Save Rating</button></div></section>';document.body.appendChild(m);
-    ['Overall','Communication','Performance'].forEach(kind=>{const wrap=$(`rating${kind}`);for(let i=1;i<=5;i++){const b=document.createElement('button');b.type='button';b.textContent='☆';b.dataset.value=i;b.addEventListener('click',()=>{wrap.querySelectorAll('button').forEach(x=>x.textContent=Number(x.dataset.value)<=i?'★':'☆');wrap.dataset.value=i});wrap.appendChild(b)}});
-    $('ratingCancel').onclick=closeRating;$('ratingSave').onclick=saveRating;
-  }
+  function renderCarrierRatings(){const rows=$('carrierRows');if(!rows)return;rows.querySelectorAll('tr').forEach(row=>{const btn=row.querySelector('.carrier-view');if(!btn)return;const s=summaryFor(btn.dataset.id);if(!s)return;const company=row.querySelector('.customer');if(company&&!company.querySelector('.carrier-rating')){const el=document.createElement('span');el.className='carrier-rating';el.title=`${s.rating_count} completed load rating${s.rating_count===1?'':'s'}`;el.innerHTML=`<strong>${stars(Math.round(Number(s.average_rating)))}</strong> ${avgText(s.average_rating)} <small>(${s.rating_count})</small>`;company.appendChild(el);}});}
+  function injectStyle(){if($('carrierRatingStyle'))return;const s=document.createElement('style');s.id='carrierRatingStyle';s.textContent='.carrier-rating{display:block;margin-top:4px;font-size:12px}.carrier-rating strong{letter-spacing:1px}.carrier-rating small{opacity:.65}.rating-modal{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center}.rating-modal.hidden{display:none}.rating-backdrop{position:absolute;inset:0;background:rgba(2,12,24,.55)}.rating-card{position:relative;width:min(520px,calc(100vw - 32px));background:#fff;border-radius:18px;padding:24px;box-shadow:0 25px 80px rgba(0,0,0,.25)}.rating-card h3{margin:0 0 4px}.rating-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}.rating-field label{display:block;font-weight:600;margin-bottom:7px}.rating-stars{display:flex;gap:4px}.rating-stars button{border:0;background:none;font-size:30px;cursor:pointer;padding:0}.rating-card textarea{width:100%;min-height:90px;box-sizing:border-box}.rating-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}';document.head.appendChild(s);}
+  function ensureModal(){if($('carrierRatingModal'))return;const m=document.createElement('div');m.id='carrierRatingModal';m.className='rating-modal hidden';m.innerHTML='<div class="rating-backdrop"></div><section class="rating-card"><div class="kicker">CARRIER PERFORMANCE</div><h3 id="ratingCarrierName">Rate Carrier</h3><p class="muted">Rate this carrier after the load is completed. Your rating will be visible to the entire Might Logistics team.</p><div class="rating-grid"><div class="rating-field"><label>Overall</label><div id="ratingOverall" class="rating-stars"></div></div><div class="rating-field"><label>Communication</label><div id="ratingCommunication" class="rating-stars"></div></div><div class="rating-field"><label>Performance</label><div id="ratingPerformance" class="rating-stars"></div></div></div><label>Comments<textarea id="ratingComment" placeholder="How did the load go? Communication, reliability, issues, etc."></textarea></label><div id="ratingMessage" class="save-message"></div><div class="rating-actions"><button id="ratingCancel" class="outline">Cancel</button><button id="ratingSave" class="primary">Save Rating</button></div></section>';document.body.appendChild(m);['Overall','Communication','Performance'].forEach(kind=>{const wrap=$(`rating${kind}`);for(let i=1;i<=5;i++){const b=document.createElement('button');b.type='button';b.textContent='☆';b.dataset.value=i;b.addEventListener('click',()=>{wrap.querySelectorAll('button').forEach(x=>x.textContent=Number(x.dataset.value)<=i?'★':'☆');wrap.dataset.value=i});wrap.appendChild(b)}});$('ratingCancel').onclick=closeRating;$('ratingSave').onclick=saveRating;}
   let active={carrierId:null,loadId:null};
-  function openRating(load){
-    if(!load?.carrier_id){alert('This load does not have a saved carrier assigned.');return}
-    ensureModal();active={carrierId:load.carrier_id,loadId:load.id};$('ratingCarrierName').textContent=load.carrier_name||'Carrier';['Overall','Communication','Performance'].forEach(k=>{$(`rating${k}`).dataset.value='0';$(`rating${k}`).querySelectorAll('button').forEach(b=>b.textContent='☆')});$('ratingComment').value='';$('ratingMessage').textContent='';$('carrierRatingModal').classList.remove('hidden');
-  }
+  function openRating(load){if(!load?.carrier_id){alert('This load does not have a saved carrier assigned.');return}ensureModal();active={carrierId:load.carrier_id,loadId:load.id};$('ratingCarrierName').textContent=load.carrier_name||'Carrier';['Overall','Communication','Performance'].forEach(k=>{$(`rating${k}`).dataset.value='0';$(`rating${k}`).querySelectorAll('button').forEach(b=>b.textContent='☆')});$('ratingComment').value='';$('ratingMessage').textContent='';$('carrierRatingModal').classList.remove('hidden');}
   function closeRating(){$('carrierRatingModal')?.classList.add('hidden')}
-  async function saveRating(){
-    const overall=Number($('ratingOverall').dataset.value||0),communication=Number($('ratingCommunication').dataset.value||0),performance=Number($('ratingPerformance').dataset.value||0);if(!overall||!communication||!performance){$('ratingMessage').textContent='Please select a rating for all three categories.';return}
-    $('ratingSave').disabled=true;$('ratingMessage').textContent='Saving rating…';
-    const {data:user}=await db.auth.getUser();
-    const {error}=await db.from('carrier_ratings').upsert({carrier_id:active.carrierId,load_id:active.loadId,reviewer_id:user?.user?.id||null,overall_rating:overall,communication_rating:communication,performance_rating:performance,comment:$('ratingComment').value.trim()||null,updated_at:new Date().toISOString()},{onConflict:'carrier_id,load_id'});
-    $('ratingSave').disabled=false;if(error){$('ratingMessage').textContent=error.message;return}$('ratingMessage').textContent='Rating saved.';await loadRatings();setTimeout(closeRating,500);
-  }
-  function addRateButtons(){
-    const rows=$('loadRows');if(!rows)return;
-    rows.querySelectorAll('.load-view').forEach(btn=>{
-      const row=btn.closest('tr');if(!row||row.querySelector('.rate-carrier'))return;
-      const loadNo=row.querySelector('td strong')?.textContent;const carrier=Array.isArray(window.__mightLoads)?window.__mightLoads.find(x=>x.load_number===loadNo):null;
-      if(!carrier||!['delivered','invoiced','paid'].includes(carrier.status)||!carrier.carrier_id)return;
-      const b=document.createElement('button');b.className='outline rate-carrier';b.textContent='Rate';b.addEventListener('click',()=>openRating(carrier));row.lastElementChild.appendChild(b);
-    });
-  }
-  function init(){injectStyle();ensureModal();loadRatings();setInterval(()=>{loadRatings();addRateButtons();},1500);document.addEventListener('click',e=>{const b=e.target.closest('.load-view');if(b)setTimeout(addRateButtons,100)})}
+  async function saveRating(){const overall=Number($('ratingOverall').dataset.value||0),communication=Number($('ratingCommunication').dataset.value||0),performance=Number($('ratingPerformance').dataset.value||0);if(!overall||!communication||!performance){$('ratingMessage').textContent='Please select a rating for all three categories.';return}$('ratingSave').disabled=true;$('ratingMessage').textContent='Saving rating…';const {data:user}=await db.auth.getUser();const {error}=await db.from('carrier_ratings').upsert({carrier_id:active.carrierId,load_id:active.loadId,reviewer_id:user?.user?.id||null,overall_rating:overall,communication_rating:communication,performance_rating:performance,comment:$('ratingComment').value.trim()||null,updated_at:new Date().toISOString()},{onConflict:'carrier_id,load_id'});$('ratingSave').disabled=false;if(error){$('ratingMessage').textContent=error.message;return}$('ratingMessage').textContent='Rating saved.';await loadRatings();setTimeout(closeRating,500);}
+  function addRateButtons(){const rows=$('loadRows');if(!rows)return;rows.querySelectorAll('.load-view').forEach(btn=>{const row=btn.closest('tr');if(!row||row.querySelector('.rate-carrier'))return;const loadNo=row.querySelector('td strong')?.textContent;const load=loads.find(x=>x.load_number===loadNo);if(!load||!['delivered','invoiced','paid'].includes(load.status)||!load.carrier_id)return;const b=document.createElement('button');b.className='outline rate-carrier';b.textContent='Rate';b.addEventListener('click',()=>openRating(load));row.lastElementChild.appendChild(b);});}
+  function init(){injectStyle();ensureModal();loadRatings();loadCompletedLoads();setInterval(()=>{loadRatings();loadCompletedLoads()},5000);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
   window.mightCarrierRatings={loadRatings,openRating};
 })();
