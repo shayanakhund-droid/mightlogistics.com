@@ -172,7 +172,14 @@ form.addEventListener('submit', async (event) => {
     window.location.href = `quote-success.html?ref=${encodeURIComponent(reference)}`;
   } catch (error) {
     console.error('Quote submission failed:', error);
-    showError(error.message?.includes('function') ? 'The quote system needs one database update before new ZIP/mileage quotes can be submitted.' : 'We could not submit your request right now. Please try again or call (201) 633-7756.');
+
+    // During troubleshooting, show the actual Supabase error instead of hiding it
+    // behind the generic submission message. This lets us identify the exact
+    // database/function/permission issue if the RPC is not yet synchronized.
+    const rawMessage = error?.message || error?.details || error?.hint || 'Unknown submission error.';
+    const errorCode = error?.code ? ` [${error.code}]` : '';
+    showError(`Quote submission failed${errorCode}: ${rawMessage}`);
+
     submitButton.disabled = false;
     submitButton.textContent = 'Request My Quote';
   }
