@@ -2,25 +2,65 @@
   const db=window.mightDb;if(!db)return;
   const $=id=>document.getElementById(id);
   let lastCarrierId='';
+  let loadingCarriers=false;
+
+  async function populateCarrierSelect(preferredId){
+    const sel=$('load_carrierId');
+    if(!sel||loadingCarriers)return;
+    loadingCarriers=true;
+    try{
+      const current=preferredId!==undefined?preferredId:(sel.value||'');
+      const {data,error}=await db.from('carriers').select('id,legal_name,mc_number,status').order('legal_name',{ascending:true});
+      if(error)throw error;
+      const carriers=(data||[]).filter(c=>c.status!=='do_not_use');
+      sel.innerHTML='<option value="">Unassigned</option>'+carriers.map(c=>{
+        const id=String(c.id).replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+        const name=String(c.legal_name||'Unnamed Carrier').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+        const mc=c.mc_number?` — ${String(c.mc_number).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))}`:'';
+        return `<option value="${id}">${name}${mc}</option>`;
+      }).join('');
+      if(current)sel.value=String(current);
+      if(sel.value!==String(current||''))sel.value='';
+    }catch(err){
+      console.error('Carrier dropdown failed to load',err);
+    }finally{
+      loadingCarriers=false;
+    }
+  }
+
   async function applyCarrier(){
     const sel=$('load_carrierId');
-    if(!sel||!sel.value||sel.value===lastCarrierId)return;
-    lastCarrierId=sel.value;
-    const {data,error}=await db.from('carriers').select('id,legal_name,mc_number').eq('id',sel.value).maybeSingle();
+    if(!sel)return;
+    const id=sel.value;
+    if(!id){lastCarrierId='';return;}
+    if(id===lastCarrierId)return;
+    lastCarrierId=id;
+    const {data,error}=await db.from('carriers').select('id,legal_name,mc_number').eq('id',id).maybeSingle();
     if(error||!data)return;
     const name=$('load_carrierName'),mc=$('load_carrierMc');
     if(name)name.value=data.legal_name||'';
     if(mc)mc.value=data.mc_number||'';
   }
+
   function init(){
-    document.addEventListener('change',e=>{if(e.target?.id==='load_carrierId'){lastCarrierId='';applyCarrier();}});
-    setInterval(applyCarrier,250);
-    if(!document.querySelector('script[data-might-enhancements]')){
-      const script=document.createElement('script');
-      script.src='enhancements.js?v=2';
-      script.dataset.mightEnhancements='1';
-      document.body.appendChild(script);
-    }
+    document.addEventListener('change',e=>{
+      if(e.target?.id==='load_carrierId'){
+        lastCarrierId='';
+        applyCarrier();
+      }
+    });
+    document.addEventListener('click',e=>{
+      if(e.target?.id==='createLoad')setTimeout(()=>populateCarrierSelect(),100);
+      if(e.target?.id==='loadRefresh')setTimeout(()=>populateCarrierSelect(),100);
+    });
+    setInterval(()=>{
+      const modal=$('loadModal');
+      if(modal&&!modal.classList.contains('hidden')){
+        if(($('load_carrierId')?.options.length||0)<=1)populateCarrierSelect($('load_carrierId')?.value||'');
+        applyCarrier();
+      }
+    },500);
+    populateCarrierSelect();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
