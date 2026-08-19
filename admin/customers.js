@@ -25,10 +25,11 @@ const crmDb = window.supabase.createClient(CRM_URL, CRM_KEY);
     const rows = crm$('customerRows'); if(!rows) return;
     rows.innerHTML = '<tr><td colspan="7" class="empty">Loading customers…</td></tr>';
 
-    const {data, error} = await crmDb.from('quote_requests').select('id,quote_number,customer_id,customer_name,company_name,email,phone,origin,destination,pickup_date,status,created_at,updated_at,notes').order('created_at',{ascending:false});
+    // Keep this query limited to columns confirmed in quote_requests.
+    const {data, error} = await crmDb.from('quote_requests').select('id,quote_number,customer_id,customer_name,company_name,email,phone,origin,destination,pickup_date,status,created_at,notes').order('created_at',{ascending:false});
     if(error){
       console.error('Customer CRM load error:', error);
-      rows.innerHTML='<tr><td colspan="7" class="empty">Could not load customers. Refresh and try again.</td></tr>';
+      rows.innerHTML=`<tr><td colspan="7" class="empty">Could not load customers.<br><small>${esc(error.message || 'Supabase request failed')}</small></td></tr>`;
       return;
     }
 
@@ -45,7 +46,7 @@ const crmDb = window.supabase.createClient(CRM_URL, CRM_KEY);
           phone: q.phone || '',
           notes: q.notes || '',
           created_at: q.created_at,
-          updated_at: q.updated_at || q.created_at,
+          updated_at: q.created_at,
           derived: !q.customer_id
         });
       }
