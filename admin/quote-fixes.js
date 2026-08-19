@@ -33,4 +33,11 @@
   const style=document.createElement('style');
   style.textContent='@media print{#appView,#drawer{display:none!important}.quote-preview{display:block!important;position:static!important}.quote-preview-panel{position:static!important}.quote-document{overflow:visible!important}.quote-paper{page-break-inside:avoid!important}.quote-logo{width:42px;height:42px;display:block}}';
   document.head.appendChild(style);
+
+  if(!document.querySelector('script[data-might-enhancements]')){
+    const script=document.createElement('script');
+    script.src='enhancements.js?v=1';
+    script.dataset.mightEnhancements='1';
+    document.body.appendChild(script);
+  }
 })();
