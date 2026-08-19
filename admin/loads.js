@@ -57,7 +57,9 @@
     e.preventDefault();const f=$('loadForm'),id=f.dataset.id||null,customerRate=Number($('load_customerRate').value||0),carrierRate=Number($('load_carrierRate').value||0);
     const payload={source:$('load_source').value,status:$('load_status').value,origin:$('load_origin').value.trim(),destination:$('load_destination').value.trim(),pickup_date:$('load_pickupDate').value||null,delivery_date:$('load_deliveryDate').value||null,equipment:$('load_equipment').value,commodity:$('load_commodity').value.trim(),weight:Number($('load_weight').value||0)||null,pieces:Number($('load_pieces').value||0)||null,customer_rate:customerRate||null,carrier_rate:carrierRate||null,gross_margin:(customerRate-carrierRate)||null,carrier_name:$('load_carrierName').value.trim()||null,carrier_mc:$('load_carrierMc').value.trim()||null,driver_name:$('load_driverName').value.trim()||null,driver_phone:$('load_driverPhone').value.trim()||null,truck_number:$('load_truckNumber').value.trim()||null,trailer_number:$('load_trailerNumber').value.trim()||null,special_requirements:$('load_specialRequirements').value.trim()||null,internal_notes:$('load_internalNotes').value.trim()||null,updated_at:new Date().toISOString()};
     if(!payload.origin||!payload.destination){$('loadSaveMessage').textContent='Origin and destination are required.';return;}$('loadSaveMessage').textContent='Saving…';
-    let result;if(id)result=await db.from('loads').update(payload).eq('id',id);else{payload.load_number=await nextLoadNumber();result=await db.from('loads').insert(payload);}
+    let result;
+    if(id) result=await db.from('loads').update(payload).eq('id',id);
+    else { const {data:number,error:numberError}=await db.rpc('next_load_number'); if(numberError){$('loadSaveMessage').textContent=numberError.message;return;} payload.load_number=number; result=await db.from('loads').insert(payload); }
     if(result.error){$('loadSaveMessage').textContent=result.error.message;return;}$('loadSaveMessage').textContent='Saved.';await loadLoads();setTimeout(closeLoad,500);
   }
   async function advanceLoadStatus(){
@@ -68,12 +70,12 @@
     const {error}=await db.from('loads').update(patch).eq('id',id);if(error){$('loadSaveMessage').textContent=error.message;return;}
     $('loadSaveMessage').textContent=`Status updated to ${statusLabel(next)}.`;await loadLoads();
   }
-  async function nextLoadNumber(){const {data}=await db.from('loads').select('load_number').order('created_at',{ascending:false}).limit(100);let max=0;(data||[]).forEach(x=>{const m=String(x.load_number||'').match(/^ML-L(\d+)$/);if(m)max=Math.max(max,Number(m[1]));});return `ML-L${String(max+1).padStart(5,'0')}`;}
   async function createFromQuote(){
     const title=$('drawerTitle')?.textContent?.trim()||'',m=title.match(/(\d+)/);if(!m)return;const quoteNo=Number(m[1]);
     const {data:q,error}=await db.from('quote_requests').select('*').eq('quote_number',quoteNo).maybeSingle();if(error||!q){alert('Could not find this quote.');return;}
     const existing=await db.from('loads').select('id,load_number').eq('quote_id',q.id).maybeSingle();if(existing.data){alert(`This quote is already linked to load ${existing.data.load_number}.`);return;}
-    const loadNumber=await nextLoadNumber();const {error:insertError}=await db.from('loads').insert({load_number:loadNumber,quote_id:q.id,customer_id:q.customer_id||null,source:'website',status:'booked',origin:q.origin,destination:q.destination,pickup_date:q.pickup_date,equipment:q.equipment,commodity:q.commodity,weight:q.weight_lbs,pieces:q.pieces,special_requirements:q.special_requirements,customer_rate:q.customer_rate,carrier_rate:q.carrier_rate,gross_margin:q.margin,internal_notes:q.internal_notes||q.notes,booked_at:new Date().toISOString()});
+    const {data:loadNumber,error:numberError}=await db.rpc('next_load_number');if(numberError){alert(numberError.message);return;}
+    const {error:insertError}=await db.from('loads').insert({load_number:loadNumber,quote_id:q.id,customer_id:q.customer_id||null,source:'website',status:'booked',origin:q.origin,destination:q.destination,pickup_date:q.pickup_date,equipment:q.equipment,commodity:q.commodity,weight:q.weight_lbs,pieces:q.pieces,special_requirements:q.special_requirements,customer_rate:q.customer_rate,carrier_rate:q.carrier_rate,gross_margin:q.margin,internal_notes:q.internal_notes||q.notes,booked_at:new Date().toISOString()});
     if(insertError){alert(insertError.message);return;}alert(`Load ${loadNumber} created successfully.`);closeLoad();if(window.closeDrawer)window.closeDrawer();loadLoads();
   }
   function addBookButton(){const actions=$('quoteActions');if(!actions||$('bookLoadFromQuote'))return;const btn=document.createElement('button');btn.id='bookLoadFromQuote';btn.className='outline action-button';btn.textContent='Book as Load';btn.addEventListener('click',createFromQuote);actions.querySelector('.quote-action-row')?.appendChild(btn);}
