@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="admin.css?v=5">
+  <link rel="stylesheet" href="admin.css?v=6">
 </head>
 <body>
   <div id="loginView" class="login-view">
@@ -91,13 +91,36 @@
         </div>
         <label>Status<select id="detailStatus"><option value="new">New</option><option value="reviewing">Reviewing</option><option value="quoting">Quoting</option><option value="quoted">Quoted</option><option value="booked">Booked</option><option value="lost">Lost</option><option value="cancelled">Cancelled</option></select></label>
         <label>Internal notes<textarea id="internalNotes" rows="5" placeholder="Notes visible to the Might team only…"></textarea></label>
-        <button id="saveQuote" class="primary">Save Changes</button><div id="saveMessage" class="save-message"></div>
+        <div class="quote-action-row">
+          <button id="previewQuote" class="outline action-button">Preview Customer Quote</button>
+          <button id="saveQuote" class="primary action-button">Save Changes</button>
+        </div>
+        <div id="saveMessage" class="save-message"></div>
       </div>
     </aside>
   </div>
 
+  <div id="quotePreview" class="quote-preview hidden" aria-hidden="true">
+    <div class="quote-preview-backdrop" id="quotePreviewClose"></div>
+    <section class="quote-preview-panel">
+      <div class="quote-preview-toolbar">
+        <div><div class="kicker">CUSTOMER QUOTE</div><strong id="previewQuoteNumber">ML-00001</strong></div>
+        <div class="preview-toolbar-actions">
+          <button id="emailQuote" class="outline">Email Quote</button>
+          <button id="printQuote" class="primary">Print / Save PDF</button>
+          <button id="quotePreviewX" class="close">×</button>
+        </div>
+      </div>
+      <div id="quotePreviewContent" class="quote-document"></div>
+      <div class="quote-preview-footer">
+        <span>Customer-facing document — carrier cost and margin are never shown.</span>
+        <button id="markQuoted" class="primary">Mark as Quoted</button>
+      </div>
+    </section>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="admin.js?v=5"></script>
-  <script src="customers.js?v=5"></script>
+  <script src="admin.js?v=6"></script>
+  <script src="customers.js?v=6"></script>
 </body>
 </html>
