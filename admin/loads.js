@@ -44,15 +44,18 @@
     if(current==='cancelled'||idx<0||idx>=statusFlow.length-1){btn.disabled=true;btn.textContent='No Next Status';return;}
     btn.disabled=false;btn.textContent=`Advance to ${statusLabel(statusFlow[idx+1])}`;
   }
+  function fieldMap(){return {companyName:'company_name',origin:'origin',destination:'destination',pickupDate:'pickup_date',deliveryDate:'delivery_date',equipment:'equipment',commodity:'commodity',weight:'weight',pieces:'pieces',customerRate:'customer_rate',carrierRate:'carrier_rate',carrierName:'carrier_name',carrierMc:'carrier_mc',driverName:'driver_name',driverPhone:'driver_phone',truckNumber:'truck_number',trailerNumber:'trailer_number',specialRequirements:'special_requirements',internalNotes:'internal_notes'};}
   function openLoad(id){
-    const l=loads.find(x=>String(x.id)===String(id));if(!l)return;$('loadModalTitle').textContent=l.load_number;$('loadForm').dataset.id=l.id;
-    ['companyName','origin','destination','pickupDate','deliveryDate','equipment','commodity','weight','pieces','customerRate','carrierRate','carrierName','carrierMc','driverName','driverPhone','truckNumber','trailerNumber','specialRequirements','internalNotes'].forEach(k=>{const el=$('load_'+k);if(el)el.value=l[{companyName:'company_name',origin:'origin',destination:'destination',pickupDate:'pickup_date',deliveryDate:'delivery_date',equipment:'equipment',commodity:'commodity',weight:'weight',pieces:'pieces',customerRate:'customer_rate',carrierRate:'carrier_rate',carrierName:'carrier_name',carrierMc:'carrier_mc',driverName:'driver_name',driverPhone:'driver_phone',truckNumber:'truck_number',trailerNumber:'trailer_number',specialRequirements:'special_requirements',internalNotes:'internal_notes'}[k]]??'';});
-    $('load_status').value=l.status||'new';$('load_source').value=l.source||'other';$('loadModal').classList.remove('hidden');updateLoadEconomics();updateAdvanceButton();
+    const l=loads.find(x=>String(x.id)===String(id));if(!l)return;
+    $('loadModalTitle').textContent=l.load_number;$('loadForm').dataset.id=l.id;
+    const map=fieldMap();Object.keys(map).forEach(k=>{const el=$('load_'+k);if(el)el.value=l[map[k]]??'';});
+    $('load_status').value=l.status||'new';$('load_source').value=l.source||'other';$('loadSaveMessage').textContent='';
+    $('loadModal').classList.remove('hidden');updateLoadEconomics();updateAdvanceButton();
   }
   function closeLoad(){$('loadModal')?.classList.add('hidden');}
   async function saveLoad(e){
     e.preventDefault();const f=$('loadForm'),id=f.dataset.id||null,customerRate=Number($('load_customerRate').value||0),carrierRate=Number($('load_carrierRate').value||0);
-    const payload={source:$('load_source').value,status:$('load_status').value,origin:$('load_origin').value.trim(),destination:$('load_destination').value.trim(),pickup_date:$('load_pickupDate').value||null,delivery_date:$('load_deliveryDate').value||null,equipment:$('load_equipment').value.trim(),commodity:$('load_commodity').value.trim(),weight:Number($('load_weight').value||0)||null,pieces:Number($('load_pieces').value||0)||null,customer_rate:customerRate||null,carrier_rate:carrierRate||null,gross_margin:(customerRate-carrierRate)||null,carrier_name:$('load_carrierName').value.trim()||null,carrier_mc:$('load_carrierMc').value.trim()||null,driver_name:$('load_driverName').value.trim()||null,driver_phone:$('load_driverPhone').value.trim()||null,truck_number:$('load_truckNumber').value.trim()||null,trailer_number:$('load_trailerNumber').value.trim()||null,special_requirements:$('load_specialRequirements').value.trim()||null,internal_notes:$('load_internalNotes').value.trim()||null,updated_at:new Date().toISOString()};
+    const payload={source:$('load_source').value,status:$('load_status').value,origin:$('load_origin').value.trim(),destination:$('load_destination').value.trim(),pickup_date:$('load_pickupDate').value||null,delivery_date:$('load_deliveryDate').value||null,equipment:$('load_equipment').value,commodity:$('load_commodity').value.trim(),weight:Number($('load_weight').value||0)||null,pieces:Number($('load_pieces').value||0)||null,customer_rate:customerRate||null,carrier_rate:carrierRate||null,gross_margin:(customerRate-carrierRate)||null,carrier_name:$('load_carrierName').value.trim()||null,carrier_mc:$('load_carrierMc').value.trim()||null,driver_name:$('load_driverName').value.trim()||null,driver_phone:$('load_driverPhone').value.trim()||null,truck_number:$('load_truckNumber').value.trim()||null,trailer_number:$('load_trailerNumber').value.trim()||null,special_requirements:$('load_specialRequirements').value.trim()||null,internal_notes:$('load_internalNotes').value.trim()||null,updated_at:new Date().toISOString()};
     if(!payload.origin||!payload.destination){$('loadSaveMessage').textContent='Origin and destination are required.';return;}$('loadSaveMessage').textContent='Saving…';
     let result;if(id)result=await db.from('loads').update(payload).eq('id',id);else{payload.load_number=await nextLoadNumber();result=await db.from('loads').insert(payload);}
     if(result.error){$('loadSaveMessage').textContent=result.error.message;return;}$('loadSaveMessage').textContent='Saved.';await loadLoads();setTimeout(closeLoad,500);
@@ -60,7 +63,9 @@
   async function advanceLoadStatus(){
     const current=$('load_status').value,idx=statusFlow.indexOf(current);if(idx<0||idx>=statusFlow.length-1)return;const next=statusFlow[idx+1];$('load_status').value=next;updateAdvanceButton();
     const id=$('loadForm').dataset.id;if(!id)return;$('loadSaveMessage').textContent=`Saving ${statusLabel(next)}…`;
-    const {error}=await db.from('loads').update({status:next,updated_at:new Date().toISOString()}).eq('id',id);if(error){$('loadSaveMessage').textContent=error.message;return;}
+    const timestamps={picked_up:'picked_up_at',delivered:'delivered_at',invoiced:'invoiced_at',paid:'paid_at',booked:'booked_at'};
+    const patch={status:next,updated_at:new Date().toISOString()};if(timestamps[next])patch[timestamps[next]]=new Date().toISOString();
+    const {error}=await db.from('loads').update(patch).eq('id',id);if(error){$('loadSaveMessage').textContent=error.message;return;}
     $('loadSaveMessage').textContent=`Status updated to ${statusLabel(next)}.`;await loadLoads();
   }
   async function nextLoadNumber(){const {data}=await db.from('loads').select('load_number').order('created_at',{ascending:false}).limit(100);let max=0;(data||[]).forEach(x=>{const m=String(x.load_number||'').match(/^ML-L(\d+)$/);if(m)max=Math.max(max,Number(m[1]));});return `ML-L${String(max+1).padStart(5,'0')}`;}
