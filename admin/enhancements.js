@@ -28,7 +28,10 @@
       input.setAttribute('placeholder','(XXX) XXX-XXXX');
       if(!input.dataset.phoneEnhanced){
         input.dataset.phoneEnhanced='1';
-        input.addEventListener('input',()=>{ const start=input.selectionStart; input.value=formatPhone(input.value); if(document.activeElement===input) input.setSelectionRange(input.value.length,input.value.length); });
+        input.addEventListener('input',()=>{
+          input.value=formatPhone(input.value);
+          if(document.activeElement===input) input.setSelectionRange(input.value.length,input.value.length);
+        });
         if(input.value) input.value=formatPhone(input.value);
       }
     });
@@ -36,7 +39,11 @@
   function formatPhoneLinks(root=document){
     root.querySelectorAll?.('a[href^="tel:"]').forEach(a=>{
       const formatted=formatPhone(a.textContent);
-      if(formatted){ a.textContent=formatted; a.setAttribute('href',`tel:+1${digits(a.textContent)}`); }
+      if(!formatted)return;
+      const digitsOnly=digits(formatted);
+      const desiredHref=`tel:+1${digitsOnly}`;
+      if(a.textContent!==formatted) a.textContent=formatted;
+      if(a.getAttribute('href')!==desiredHref) a.setAttribute('href',desiredHref);
     });
   }
 
@@ -102,7 +109,9 @@
     setupLoads();
     formatPhoneInputs(document);
     formatPhoneLinks(document);
-    const observer=new MutationObserver(()=>{
+    const observer=new MutationObserver(mutations=>{
+      const hasAddedNodes=mutations.some(m=>m.type==='childList' && m.addedNodes.length>0);
+      if(!hasAddedNodes)return;
       setupLoads();
       formatPhoneInputs(document);
       formatPhoneLinks(document);
