@@ -17,6 +17,7 @@
       window.open(gmail,'_blank','noopener,noreferrer');
     });
   }
+
   const previewButton=document.getElementById('previewQuote');
   if(previewButton){
     previewButton.addEventListener('click',function(){
@@ -30,6 +31,7 @@
       }
     });
   }
+
   const style=document.createElement('style');
   style.textContent='@media print{#appView,#drawer{display:none!important}.quote-preview{display:block!important;position:static!important}.quote-preview-panel{position:static!important}.quote-document{overflow:visible!important}.quote-paper{page-break-inside:avoid!important}.quote-logo{width:42px;height:42px;display:block}}';
   document.head.appendChild(style);
@@ -41,36 +43,51 @@
     document.body.appendChild(script);
   }
 
-  // Navigation fix: Quote Requests lives inside the dashboard workspace.
-  // customers.js previously hid every workspace when section === 'quotes',
-  // which left the main content completely blank.
+  function setActive(section){
+    document.querySelectorAll('nav a[data-section]').forEach(function(a){
+      a.classList.toggle('active',a.dataset.section===section);
+    });
+  }
+
+  function showWorkspace(section){
+    const dashboard=document.getElementById('dashboard');
+    const customers=document.getElementById('customers');
+    const loads=document.getElementById('loads');
+    const stats=dashboard?.querySelector('.stats');
+    const quotes=document.getElementById('quotes');
+    const title=document.getElementById('pageTitle');
+
+    if(section==='quotes'){
+      dashboard?.classList.remove('hidden');
+      customers?.classList.add('hidden');
+      loads?.classList.add('hidden');
+      stats?.classList.add('hidden');
+      quotes?.classList.add('quotes-workspace');
+      setActive('quotes');
+      if(title) title.textContent='Quote Requests';
+      if(typeof loadQuotes==='function') loadQuotes();
+      window.scrollTo({top:0,behavior:'instant'});
+      return;
+    }
+
+    if(section==='dashboard'){
+      dashboard?.classList.remove('hidden');
+      customers?.classList.add('hidden');
+      loads?.classList.add('hidden');
+      stats?.classList.remove('hidden');
+      quotes?.classList.remove('quotes-workspace');
+      setActive('dashboard');
+      if(title) title.textContent='Operations Dashboard';
+      window.scrollTo({top:0,behavior:'instant'});
+      return;
+    }
+  }
+
   document.querySelectorAll('nav a[data-section]').forEach(function(link){
     link.addEventListener('click',function(){
       const section=link.dataset.section;
-      if(section==='quotes'){
-        setTimeout(function(){
-          document.getElementById('dashboard')?.classList.remove('hidden');
-          document.getElementById('customers')?.classList.add('hidden');
-          document.getElementById('loads')?.classList.add('hidden');
-          document.querySelectorAll('nav a[data-section]').forEach(function(a){
-            a.classList.toggle('active',a.dataset.section==='quotes');
-          });
-          const title=document.getElementById('pageTitle');
-          if(title) title.textContent='Quote Requests';
-          if(typeof loadQuotes==='function') loadQuotes();
-          document.getElementById('quotes')?.scrollIntoView({block:'start'});
-        },0);
-      } else if(section==='dashboard'){
-        setTimeout(function(){
-          document.getElementById('dashboard')?.classList.remove('hidden');
-          document.getElementById('customers')?.classList.add('hidden');
-          document.getElementById('loads')?.classList.add('hidden');
-          document.querySelectorAll('nav a[data-section]').forEach(function(a){
-            a.classList.toggle('active',a.dataset.section==='dashboard');
-          });
-          const title=document.getElementById('pageTitle');
-          if(title) title.textContent='Operations Dashboard';
-        },0);
+      if(section==='quotes' || section==='dashboard'){
+        setTimeout(function(){showWorkspace(section);},0);
       }
     });
   });
