@@ -36,7 +36,7 @@
 
   if(!document.querySelector('script[data-might-enhancements]')){
     const script=document.createElement('script');
-    script.src='enhancements.js?v=1';
+    script.src='enhancements.js?v=2';
     script.dataset.mightEnhancements='1';
     document.body.appendChild(script);
   }
