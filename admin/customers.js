@@ -23,12 +23,18 @@ const crmDb = window.mightDb || window.supabase.createClient(CRM_URL, CRM_KEY);
   let customers = [], quotes = [], currentQuote = null;
 
   function showSection(section) {
-    const dashboard = $('dashboard'), customerView = $('customers');
+    const dashboard = $('dashboard'), customerView = $('customers'), loadsView = $('loads');
     if (!dashboard || !customerView) return;
-    dashboard.classList.toggle('hidden', section === 'customers');
+
+    // Only one primary workspace is visible at a time.
+    dashboard.classList.toggle('hidden', section !== 'dashboard');
     customerView.classList.toggle('hidden', section !== 'customers');
+    if (loadsView) loadsView.classList.add('hidden');
+
     document.querySelectorAll('nav a[data-section]').forEach(a => a.classList.toggle('active', a.dataset.section === section));
-    if ($('pageTitle')) $('pageTitle').textContent = section === 'customers' ? 'Customer Management' : 'Operations Dashboard';
+    if ($('pageTitle')) {
+      $('pageTitle').textContent = section === 'customers' ? 'Customer Management' : 'Operations Dashboard';
+    }
     if (section === 'customers') loadCRM();
   }
 
