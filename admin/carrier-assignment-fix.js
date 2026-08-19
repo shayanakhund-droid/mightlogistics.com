@@ -15,6 +15,12 @@
   function init(){
     document.addEventListener('change',e=>{if(e.target?.id==='load_carrierId'){lastCarrierId='';applyCarrier();}});
     setInterval(applyCarrier,250);
+    if(!document.querySelector('script[data-might-enhancements]')){
+      const script=document.createElement('script');
+      script.src='enhancements.js?v=2';
+      script.dataset.mightEnhancements='1';
+      document.body.appendChild(script);
+    }
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
