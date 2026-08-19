@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="admin.css?v=6">
   <link rel="stylesheet" href="quote.css?v=1">
+  <link rel="stylesheet" href="loads.css?v=1">
 </head>
 <body>
   <div id="loginView" class="login-view">
@@ -35,6 +36,7 @@
       <nav>
         <a class="active" href="#dashboard" data-section="dashboard">Overview</a>
         <a href="#quotes" data-section="quotes">Quote Requests</a>
+        <a href="#loads" data-section="loads">Loads</a>
         <a href="#customers" data-section="customers">Customers</a>
       </nav>
       <div class="side-bottom">
@@ -64,6 +66,13 @@
         </section>
       </section>
 
+      <section class="content hidden" id="loads">
+        <section class="panel">
+          <div class="panel-head"><div><div class="kicker">OPERATIONS</div><h3>Loads</h3><p class="panel-subtitle">Every shipment in one operational queue, whether it came from the website, email, phone, or an existing customer.</p></div><div class="loads-toolbar"><input id="loadSearch" type="search" placeholder="Search load, customer, lane, carrier"><select id="loadStatusFilter"><option value="all">All statuses</option><option value="new">New</option><option value="quoted">Quoted</option><option value="booked">Booked</option><option value="carrier_assigned">Carrier Assigned</option><option value="dispatched">Dispatched</option><option value="picked_up">Picked Up</option><option value="in_transit">In Transit</option><option value="delivered">Delivered</option><option value="invoiced">Invoiced</option><option value="paid">Paid</option><option value="cancelled">Cancelled</option></select><button id="loadRefresh" class="outline">Refresh</button><button id="createLoad" class="primary">+ Create Load</button></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Load</th><th>Customer</th><th>Lane</th><th>Pickup</th><th>Equipment</th><th>Carrier</th><th>Status</th><th>Customer Rate</th><th></th></tr></thead><tbody id="loadRows"><tr><td colspan="9" class="empty">Loading loads…</td></tr></tbody></table></div>
+        </section>
+      </section>
+
       <section class="content hidden" id="customers">
         <section class="panel">
           <div class="panel-head"><div><div class="kicker">CRM</div><h3>Customers</h3><p class="panel-subtitle">Every shipper in one place, with their quote history attached.</p></div><div class="controls"><input id="customerSearch" type="search" placeholder="Search company, contact, email"><button id="customerRefresh" class="outline">Refresh</button></div></div>
@@ -81,21 +90,12 @@
       <div id="quoteActions" class="drawer-actions">
         <div class="pricing-card">
           <div class="pricing-head"><div><div class="kicker">PRICING</div><h4>Quote Economics</h4></div><span id="marginBadge" class="margin-badge">Margin —</span></div>
-          <div class="pricing-grid">
-            <label>Carrier Rate<input id="carrierRate" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
-            <label>Customer Rate<input id="customerRate" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
-          </div>
-          <div class="pricing-summary">
-            <div><span>Gross Margin</span><strong id="marginAmount">$0.00</strong></div>
-            <div><span>Margin %</span><strong id="marginPercent">0.0%</strong></div>
-          </div>
+          <div class="pricing-grid"><label>Carrier Rate<input id="carrierRate" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label><label>Customer Rate<input id="customerRate" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label></div>
+          <div class="pricing-summary"><div><span>Gross Margin</span><strong id="marginAmount">$0.00</strong></div><div><span>Margin %</span><strong id="marginPercent">0.0%</strong></div></div>
         </div>
         <label>Status<select id="detailStatus"><option value="new">New</option><option value="reviewing">Reviewing</option><option value="quoting">Quoting</option><option value="quoted">Quoted</option><option value="booked">Booked</option><option value="lost">Lost</option><option value="cancelled">Cancelled</option></select></label>
         <label>Internal notes<textarea id="internalNotes" rows="5" placeholder="Notes visible to the Might team only…"></textarea></label>
-        <div class="quote-action-row">
-          <button id="previewQuote" class="outline action-button">Preview Customer Quote</button>
-          <button id="saveQuote" class="primary action-button">Save Changes</button>
-        </div>
+        <div class="quote-action-row"><button id="previewQuote" class="outline action-button">Preview Customer Quote</button><button id="saveQuote" class="primary action-button">Save Changes</button></div>
         <div id="saveMessage" class="save-message"></div>
       </div>
     </aside>
@@ -104,25 +104,50 @@
   <div id="quotePreview" class="quote-preview hidden" aria-hidden="true">
     <div class="quote-preview-backdrop" id="quotePreviewClose"></div>
     <section class="quote-preview-panel">
-      <div class="quote-preview-toolbar">
-        <div><div class="kicker">CUSTOMER QUOTE</div><strong id="previewQuoteNumber">ML-00001</strong></div>
-        <div class="preview-toolbar-actions">
-          <button id="emailQuote" class="outline">Email Quote</button>
-          <button id="printQuote" class="primary">Print / Save PDF</button>
-          <button id="quotePreviewX" class="close">×</button>
-        </div>
-      </div>
+      <div class="quote-preview-toolbar"><div><div class="kicker">CUSTOMER QUOTE</div><strong id="previewQuoteNumber">ML-00001</strong></div><div class="preview-toolbar-actions"><button id="emailQuote" class="outline">Email Quote</button><button id="printQuote" class="primary">Print / Save PDF</button><button id="quotePreviewX" class="close">×</button></div></div>
       <div id="quotePreviewContent" class="quote-document"></div>
-      <div class="quote-preview-footer">
-        <span>Customer-facing document — carrier cost and margin are never shown.</span>
-        <button id="markQuoted" class="primary">Mark as Quoted</button>
-      </div>
+      <div class="quote-preview-footer"><span>Customer-facing document — carrier cost and margin are never shown.</span><button id="markQuoted" class="primary">Mark as Quoted</button></div>
+    </section>
+  </div>
+
+  <div id="loadModal" class="loads-modal hidden" aria-hidden="true">
+    <div id="loadModalBackdrop" class="loads-backdrop"></div>
+    <section class="loads-panel">
+      <div class="loads-panel-head"><div><div class="kicker">LOAD RECORD</div><h3 id="loadModalTitle">New Load</h3></div><button id="loadModalClose" class="close">×</button></div>
+      <form id="loadForm">
+        <div class="loads-form-grid">
+          <label>Source<select id="load_source"><option value="website">Website Quote</option><option value="email">Email</option><option value="phone">Phone</option><option value="existing_customer">Existing Customer</option><option value="other">Other</option></select></label>
+          <label>Status<select id="load_status"><option value="new">New</option><option value="quoted">Quoted</option><option value="booked">Booked</option><option value="carrier_assigned">Carrier Assigned</option><option value="dispatched">Dispatched</option><option value="picked_up">Picked Up</option><option value="in_transit">In Transit</option><option value="delivered">Delivered</option><option value="invoiced">Invoiced</option><option value="paid">Paid</option><option value="cancelled">Cancelled</option></select></label>
+          <label>Origin *<input id="load_origin" required></label>
+          <label>Destination *<input id="load_destination" required></label>
+          <label>Pickup Date<input id="load_pickupDate" type="date"></label>
+          <label>Delivery Date<input id="load_deliveryDate" type="date"></label>
+          <label>Equipment<input id="load_equipment"></label>
+          <label>Commodity<input id="load_commodity"></label>
+          <label>Weight (lbs)<input id="load_weight" type="number" min="0"></label>
+          <label>Pieces<input id="load_pieces" type="number" min="0"></label>
+          <label>Customer Rate<input id="load_customerRate" type="number" min="0" step="0.01"></label>
+          <label>Carrier Rate<input id="load_carrierRate" type="number" min="0" step="0.01"></label>
+          <div class="loads-form-section"><h4>Carrier / Driver</h4></div>
+          <label>Carrier Name<input id="load_carrierName"></label>
+          <label>Carrier MC<input id="load_carrierMc"></label>
+          <label>Driver Name<input id="load_driverName"></label>
+          <label>Driver Phone<input id="load_driverPhone"></label>
+          <label>Truck #<input id="load_truckNumber"></label>
+          <label>Trailer #<input id="load_trailerNumber"></label>
+          <label class="loads-full">Special Requirements<textarea id="load_specialRequirements"></textarea></label>
+          <label class="loads-full">Internal Notes<textarea id="load_internalNotes"></textarea></label>
+        </div>
+        <div class="loads-form-actions"><div id="loadSaveMessage" class="load-save-message"></div><button type="button" id="loadModalClose2" class="outline">Cancel</button><button type="submit" class="primary">Save Load</button></div>
+      </form>
     </section>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="admin.js?v=6"></script>
   <script src="customers.js?v=6"></script>
+  <script src="loads.js?v=1"></script>
   <script src="quote-fixes.js?v=1"></script>
+  <script>document.getElementById('loadModalClose2')?.addEventListener('click',()=>document.getElementById('loadModal')?.classList.add('hidden'));</script>
 </body>
 </html>
