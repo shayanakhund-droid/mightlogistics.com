@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="admin.css?v=2">
 </head>
 <body>
   <div id="loginView" class="login-view">
@@ -32,8 +32,9 @@
       <div class="side-brand"><div class="brand-mark small">M</div><div><strong>MIGHT</strong><span>LOGISTICS</span></div></div>
       <div class="portal-label">OPERATIONS</div>
       <nav>
-        <a class="active" href="#dashboard">Overview</a>
-        <a href="#quotes">Quote Requests</a>
+        <a class="active" href="#dashboard" data-section="dashboard">Overview</a>
+        <a href="#quotes" data-section="quotes">Quote Requests</a>
+        <a href="#customers" data-section="customers">Customers</a>
       </nav>
       <div class="side-bottom">
         <div class="user-mini"><div class="avatar" id="userAvatar">L</div><div><strong id="userName">Admin</strong><span id="userEmail"></span></div></div>
@@ -43,7 +44,7 @@
 
     <main class="main">
       <header class="topbar">
-        <div><div class="eyebrow">MIGHT LOGISTICS</div><h2>Operations Dashboard</h2></div>
+        <div><div class="eyebrow">MIGHT LOGISTICS</div><h2 id="pageTitle">Operations Dashboard</h2></div>
         <div class="top-actions"><span class="status-dot"></span><span>System operational</span></div>
       </header>
 
@@ -61,19 +62,26 @@
           <div class="table-wrap"><table><thead><tr><th>Quote</th><th>Customer</th><th>Lane</th><th>Equipment</th><th>Pickup</th><th>Status</th><th></th></tr></thead><tbody id="quoteRows"><tr><td colspan="7" class="empty">Loading quote requests…</td></tr></tbody></table></div>
         </section>
       </section>
+
+      <section class="content hidden" id="customers">
+        <section class="panel">
+          <div class="panel-head"><div><div class="kicker">CRM</div><h3>Customers</h3><p class="panel-subtitle">Every shipper in one place, with their quote history attached.</p></div><div class="controls"><input id="customerSearch" type="search" placeholder="Search company, contact, email"><button id="customerRefresh" class="outline">Refresh</button></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Company</th><th>Primary Contact</th><th>Email</th><th>Phone</th><th>Quotes</th><th>Last Activity</th><th></th></tr></thead><tbody id="customerRows"><tr><td colspan="7" class="empty">Loading customers…</td></tr></tbody></table></div>
+        </section>
+      </section>
     </main>
   </div>
 
   <div id="drawer" class="drawer hidden" aria-hidden="true">
     <div class="drawer-backdrop" id="drawerClose"></div>
     <aside class="drawer-panel">
-      <div class="drawer-head"><div><div class="kicker">QUOTE REQUEST</div><h3 id="drawerTitle">ML-00001</h3></div><button class="close" id="drawerX">×</button></div>
+      <div class="drawer-head"><div><div class="kicker" id="drawerKicker">QUOTE REQUEST</div><h3 id="drawerTitle">ML-00001</h3></div><button class="close" id="drawerX">×</button></div>
       <div id="drawerBody" class="drawer-body"></div>
-      <div class="drawer-actions"><label>Status<select id="detailStatus"><option value="new">New</option><option value="reviewing">Reviewing</option><option value="quoting">Quoting</option><option value="quoted">Quoted</option><option value="booked">Booked</option><option value="lost">Lost</option><option value="cancelled">Cancelled</option></select></label><label>Internal notes<textarea id="internalNotes" rows="5" placeholder="Notes visible to the Might team only…"></textarea></label><button id="saveQuote" class="primary">Save Changes</button><div id="saveMessage" class="save-message"></div></div>
+      <div id="quoteActions" class="drawer-actions"><label>Status<select id="detailStatus"><option value="new">New</option><option value="reviewing">Reviewing</option><option value="quoting">Quoting</option><option value="quoted">Quoted</option><option value="booked">Booked</option><option value="lost">Lost</option><option value="cancelled">Cancelled</option></select></label><label>Internal notes<textarea id="internalNotes" rows="5" placeholder="Notes visible to the Might team only…"></textarea></label><button id="saveQuote" class="primary">Save Changes</button><div id="saveMessage" class="save-message"></div></div>
     </aside>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="admin.js?v=1"></script>
+  <script src="admin.js?v=2"></script>
 </body>
 </html>
