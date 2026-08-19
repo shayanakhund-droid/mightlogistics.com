@@ -40,4 +40,38 @@
     script.dataset.mightEnhancements='1';
     document.body.appendChild(script);
   }
+
+  // Navigation fix: Quote Requests lives inside the dashboard workspace.
+  // customers.js previously hid every workspace when section === 'quotes',
+  // which left the main content completely blank.
+  document.querySelectorAll('nav a[data-section]').forEach(function(link){
+    link.addEventListener('click',function(){
+      const section=link.dataset.section;
+      if(section==='quotes'){
+        setTimeout(function(){
+          document.getElementById('dashboard')?.classList.remove('hidden');
+          document.getElementById('customers')?.classList.add('hidden');
+          document.getElementById('loads')?.classList.add('hidden');
+          document.querySelectorAll('nav a[data-section]').forEach(function(a){
+            a.classList.toggle('active',a.dataset.section==='quotes');
+          });
+          const title=document.getElementById('pageTitle');
+          if(title) title.textContent='Quote Requests';
+          if(typeof loadQuotes==='function') loadQuotes();
+          document.getElementById('quotes')?.scrollIntoView({block:'start'});
+        },0);
+      } else if(section==='dashboard'){
+        setTimeout(function(){
+          document.getElementById('dashboard')?.classList.remove('hidden');
+          document.getElementById('customers')?.classList.add('hidden');
+          document.getElementById('loads')?.classList.add('hidden');
+          document.querySelectorAll('nav a[data-section]').forEach(function(a){
+            a.classList.toggle('active',a.dataset.section==='dashboard');
+          });
+          const title=document.getElementById('pageTitle');
+          if(title) title.textContent='Operations Dashboard';
+        },0);
+      }
+    });
+  });
 })();
