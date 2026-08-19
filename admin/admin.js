@@ -12,7 +12,7 @@ function esc(value) {
   return String(value ?? '').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
 }
 function statusLabel(s){ return (s || '').replace(/_/g,' '); }
-function formatDate(v){ if(!v) return '—'; return new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric'}).format(new Date(v+'T00:00:00')); }
+function formatDate(v){ if(!v) return '—'; const d=new Date(String(v).length===10 ? v+'T00:00:00' : v); return Number.isNaN(d.getTime()) ? '—' : new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric'}).format(d); }
 function formatQuote(n){ return `ML-${String(n).padStart(5,'0')}`; }
 function money(v){ return Number(v || 0).toLocaleString('en-US',{style:'currency',currency:'USD'}); }
 function miles(v){ return v ? `${Number(v).toLocaleString('en-US')} mi` : '—'; }
@@ -72,7 +72,7 @@ function renderRows(){
   const filtered=quotes.filter(q=>{
     if(filter!=='all'&&q.status!==filter) return false;
     if(!term) return true;
-    return [formatQuote(q.quote_number),q.company_name,q.customer_name,q.origin,q.origin_zip,q.destination,q.destination_zip,q.equipment,q.email].some(v=>String(v||'').toLowerCase().includes(term));
+    return [formatQuote(q.quote_number),q.company_name,q.customer_name,q.origin,q.pickup_zip,q.destination,q.delivery_zip,q.equipment,q.email].some(v=>String(v||'').toLowerCase().includes(term));
   });
   if(!filtered.length){ $('quoteRows').innerHTML='<tr><td colspan="7" class="empty">No quote requests match your filters.</td></tr>'; return; }
   $('quoteRows').innerHTML=filtered.map(q=>`<tr>
@@ -115,9 +115,9 @@ function openQuote(id){
     ${detail('Email',`<a href="mailto:${esc(q.email)}">${esc(q.email)}</a>`)}
     ${detail('Phone',q.phone?`<a href="tel:${esc(q.phone)}">${esc(q.phone)}</a>`:'—')}
     ${detail('Origin',`<strong>${esc(q.origin)}</strong>`)}
-    ${detail('Pickup ZIP',`<strong>${esc(q.origin_zip)}</strong>`)}
+    ${detail('Pickup ZIP',`<strong>${esc(q.pickup_zip)}</strong>`)}
     ${detail('Destination',`<strong>${esc(q.destination)}</strong>`)}
-    ${detail('Delivery ZIP',`<strong>${esc(q.destination_zip)}</strong>`)}
+    ${detail('Delivery ZIP',`<strong>${esc(q.delivery_zip)}</strong>`)}
     ${detail('Estimated Distance',q.estimated_miles?`<strong>~${Number(q.estimated_miles).toLocaleString('en-US')} miles</strong>`:'—')}
     ${detail('Pickup date',formatDate(q.pickup_date))}
     ${detail('Equipment',esc(q.equipment))}
@@ -168,9 +168,9 @@ function buildQuoteDocument(q){
     </header>
     <section class="quote-title"><div class="kicker">FREIGHT QUOTE</div><h1>Transportation Quote</h1></section>
     <section class="quote-lane">
-      <div><span>Origin</span><strong>${esc(q.origin)}</strong><small>${esc(q.origin_zip) ? `ZIP ${esc(q.origin_zip)}` : ''}</small></div>
+      <div><span>Origin</span><strong>${esc(q.origin)}</strong><small>${esc(q.pickup_zip) ? `ZIP ${esc(q.pickup_zip)}` : ''}</small></div>
       <div class="arrow">→</div>
-      <div><span>Destination</span><strong>${esc(q.destination)}</strong><small>${esc(q.destination_zip) ? `ZIP ${esc(q.destination_zip)}` : ''}</small></div>
+      <div><span>Destination</span><strong>${esc(q.destination)}</strong><small>${esc(q.delivery_zip) ? `ZIP ${esc(q.delivery_zip)}` : ''}</small></div>
     </section>
     ${q.estimated_miles ? `<section class="quote-distance"><span>Estimated Driving Distance</span><strong>~${Number(q.estimated_miles).toLocaleString('en-US')} miles</strong></section>` : ''}
     <section class="quote-info-grid">
