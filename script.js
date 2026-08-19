@@ -1,0 +1,1 @@
+const b=document.querySelector('.mobile-btn'),p=document.querySelector('.mobile-panel');if(b)b.addEventListener('click',()=>p.classList.toggle('open'));document.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener('click',e=>{const t=document.querySelector(a.getAttribute('href'));if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth'})}}));
