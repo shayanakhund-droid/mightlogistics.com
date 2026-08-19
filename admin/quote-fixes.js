@@ -17,7 +17,20 @@
       window.open(gmail,'_blank','noopener,noreferrer');
     });
   }
+  const previewButton=document.getElementById('previewQuote');
+  if(previewButton){
+    previewButton.addEventListener('click',function(){
+      const logo=document.querySelector('#quotePreviewContent .quote-brand .brand-mark');
+      if(logo){
+        const img=document.createElement('img');
+        img.className='quote-logo';
+        img.src='../logo.svg';
+        img.alt='Might Logistics';
+        logo.replaceWith(img);
+      }
+    });
+  }
   const style=document.createElement('style');
-  style.textContent='@media print{#appView,#drawer{display:none!important}.quote-preview{display:block!important;position:static!important}.quote-preview-panel{position:static!important}.quote-document{overflow:visible!important}.quote-paper{page-break-inside:avoid!important}}';
+  style.textContent='@media print{#appView,#drawer{display:none!important}.quote-preview{display:block!important;position:static!important}.quote-preview-panel{position:static!important}.quote-document{overflow:visible!important}.quote-paper{page-break-inside:avoid!important}.quote-logo{width:42px;height:42px;display:block}}';
   document.head.appendChild(style);
 })();
