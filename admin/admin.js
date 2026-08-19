@@ -2,6 +2,7 @@ const SUPABASE_URL = 'https://sowdiflodjxxqrarbisi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_3URkcBfqIZmtujzRnO1a1g_Xdadmjvt';
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+window.mightDb = db;
 
 const $ = (id) => document.getElementById(id);
 let quotes = [];
@@ -110,7 +111,6 @@ function closeDrawer(){ $('drawer').classList.add('hidden'); $('drawer').setAttr
 async function saveQuote(){
   if(!selectedQuote)return;
   $('saveMessage').textContent='Saving…';
-  const { data:{ user } }=await db.auth.getUser();
   const { error }=await db.from('quote_requests').update({status:$('detailStatus').value,internal_notes:$('internalNotes').value.trim(),updated_at:new Date().toISOString()}).eq('id',selectedQuote.id);
   if(error){ console.error(error); $('saveMessage').textContent='Could not save changes.'; return; }
   $('saveMessage').textContent='Saved.';
