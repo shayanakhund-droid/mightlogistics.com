@@ -9,12 +9,13 @@ let quotes = [];
 let selectedQuote = null;
 
 function esc(value) {
-  return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  return String(value ?? '').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
 }
 function statusLabel(s){ return (s || '').replace(/_/g,' '); }
 function formatDate(v){ if(!v) return '—'; return new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric'}).format(new Date(v+'T00:00:00')); }
 function formatQuote(n){ return `ML-${String(n).padStart(5,'0')}`; }
 function money(v){ return Number(v || 0).toLocaleString('en-US',{style:'currency',currency:'USD'}); }
+function miles(v){ return v ? `${Number(v).toLocaleString('en-US')} mi` : '—'; }
 
 async function getProfile(){
   const { data:{ user } } = await db.auth.getUser();
@@ -28,7 +29,7 @@ async function signIn(e){
   e.preventDefault();
   $('loginError').textContent='';
   const { error } = await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
-  if(error){ $('loginError').textContent = error.message; return; }
+  if(error){ $('loginError').textContent=error.message; return; }
   await boot();
 }
 
@@ -71,13 +72,13 @@ function renderRows(){
   const filtered=quotes.filter(q=>{
     if(filter!=='all'&&q.status!==filter) return false;
     if(!term) return true;
-    return [formatQuote(q.quote_number),q.company_name,q.customer_name,q.origin,q.destination,q.equipment,q.email].some(v=>String(v||'').toLowerCase().includes(term));
+    return [formatQuote(q.quote_number),q.company_name,q.customer_name,q.origin,q.origin_zip,q.destination,q.destination_zip,q.equipment,q.email].some(v=>String(v||'').toLowerCase().includes(term));
   });
   if(!filtered.length){ $('quoteRows').innerHTML='<tr><td colspan="7" class="empty">No quote requests match your filters.</td></tr>'; return; }
   $('quoteRows').innerHTML=filtered.map(q=>`<tr>
     <td><span class="quote-link" data-id="${q.id}">${formatQuote(q.quote_number)}</span></td>
     <td class="customer"><strong>${esc(q.company_name)}</strong><span>${esc(q.customer_name)}</span></td>
-    <td class="lane">${esc(q.origin)} <span>→</span> ${esc(q.destination)}</td>
+    <td class="lane"><strong>${esc(q.origin)}</strong> <span>→</span> <strong>${esc(q.destination)}</strong>${q.estimated_miles?`<small style="display:block;color:#66768a;margin-top:3px">~${Number(q.estimated_miles).toLocaleString('en-US')} miles</small>`:''}</td>
     <td>${esc(q.equipment)}</td>
     <td>${formatDate(q.pickup_date)}</td>
     <td><span class="status ${esc(q.status)}">${esc(statusLabel(q.status))}</span></td>
@@ -114,7 +115,10 @@ function openQuote(id){
     ${detail('Email',`<a href="mailto:${esc(q.email)}">${esc(q.email)}</a>`)}
     ${detail('Phone',q.phone?`<a href="tel:${esc(q.phone)}">${esc(q.phone)}</a>`:'—')}
     ${detail('Origin',`<strong>${esc(q.origin)}</strong>`)}
+    ${detail('Pickup ZIP',`<strong>${esc(q.origin_zip)}</strong>`)}
     ${detail('Destination',`<strong>${esc(q.destination)}</strong>`)}
+    ${detail('Delivery ZIP',`<strong>${esc(q.destination_zip)}</strong>`)}
+    ${detail('Estimated Distance',q.estimated_miles?`<strong>~${Number(q.estimated_miles).toLocaleString('en-US')} miles</strong>`:'—')}
     ${detail('Pickup date',formatDate(q.pickup_date))}
     ${detail('Equipment',esc(q.equipment))}
     ${detail('Commodity',esc(q.commodity))}
@@ -164,10 +168,11 @@ function buildQuoteDocument(q){
     </header>
     <section class="quote-title"><div class="kicker">FREIGHT QUOTE</div><h1>Transportation Quote</h1></section>
     <section class="quote-lane">
-      <div><span>Origin</span><strong>${esc(q.origin)}</strong></div>
+      <div><span>Origin</span><strong>${esc(q.origin)}</strong><small>${esc(q.origin_zip) ? `ZIP ${esc(q.origin_zip)}` : ''}</small></div>
       <div class="arrow">→</div>
-      <div><span>Destination</span><strong>${esc(q.destination)}</strong></div>
+      <div><span>Destination</span><strong>${esc(q.destination)}</strong><small>${esc(q.destination_zip) ? `ZIP ${esc(q.destination_zip)}` : ''}</small></div>
     </section>
+    ${q.estimated_miles ? `<section class="quote-distance"><span>Estimated Driving Distance</span><strong>~${Number(q.estimated_miles).toLocaleString('en-US')} miles</strong></section>` : ''}
     <section class="quote-info-grid">
       <div class="quote-info"><span>Customer</span><strong>${esc(q.company_name)}</strong></div>
       <div class="quote-info"><span>Contact</span><strong>${esc(q.customer_name)}</strong></div>
@@ -178,7 +183,7 @@ function buildQuoteDocument(q){
     </section>
     <section class="quote-rate"><div><span>Total Transportation Rate</span><strong>${rate>0 ? money(rate) : 'Rate pending'}</strong></div><div class="kicker">USD</div></section>
     <section class="quote-notes"><h4>Shipment Notes</h4><p>${esc(notes)}</p></section>
-    <section class="quote-terms">This quote is based on the shipment information provided and is subject to capacity, equipment availability, and final confirmation. Any changes to the shipment details may require a revised rate. Carrier cost, margin, and internal pricing information are confidential and are not included in this customer document.</section>
+    <section class="quote-terms">This quote is based on the shipment information provided and is subject to capacity, equipment availability, and final confirmation. Any changes to the shipment details may require a revised rate. Distance is an approximate driving estimate based on the ZIP codes provided. Carrier cost, margin, and internal pricing information are confidential and are not included in this customer document.</section>
   </article>`;
 }
 function openQuotePreview(){
@@ -196,7 +201,7 @@ function emailQuote(){
   const q=previewData(); if(!q || !q.email)return;
   if(q.customer_rate<=0){ $('saveMessage').textContent='Enter a customer rate before emailing the quote.'; closeQuotePreview(); return; }
   const subject=`Might Logistics Quote ${formatQuote(q.quote_number)} — ${q.origin} to ${q.destination}`;
-  const body=`Hello ${q.customer_name || ''},\n\nPlease find our transportation quote below.\n\nQuote: ${formatQuote(q.quote_number)}\nLane: ${q.origin} → ${q.destination}\nPickup: ${formatDate(q.pickup_date)}\nEquipment: ${q.equipment}\nRate: ${money(q.customer_rate)} USD\n\nPlease reply to confirm or if you have any questions.\n\nMight Logistics`;
+  const body=`Hello ${q.customer_name || ''},\n\nPlease find our transportation quote below.\n\nQuote: ${formatQuote(q.quote_number)}\nLane: ${q.origin} → ${q.destination}\nDistance: ${q.estimated_miles ? `Approximately ${Number(q.estimated_miles).toLocaleString('en-US')} miles` : 'Not available'}\nPickup: ${formatDate(q.pickup_date)}\nEquipment: ${q.equipment}\nRate: ${money(q.customer_rate)} USD\n\nPlease reply to confirm or if you have any questions.\n\nMight Logistics`;
   window.location.href=`mailto:${encodeURIComponent(q.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 async function markQuoted(){
