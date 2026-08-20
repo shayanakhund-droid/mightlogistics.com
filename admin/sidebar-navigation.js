@@ -99,17 +99,14 @@
     if(view==='issues'){
       const root=document.getElementById('dispatch');
       if(!root)return;
-      const host=root.querySelector('#dispatchWorkspaceHost');
-      if(host){
-        host.innerHTML='<section class="dw-panel"><header class="dw-header"><div><div class="dw-kicker">DISPATCH SUPPORT</div><h1>Report Issues</h1><p>Capture an operational issue for the dispatch team.</p></div></header><div style="padding:20px;display:grid;gap:14px;max-width:720px"><label>Issue type<select id="mightIssueType"><option>Load issue</option><option>Carrier issue</option><option>Customer issue</option><option>Dispatcher issue</option><option>Other</option></select></label><label>Description<textarea id="mightIssueDescription" rows="6" placeholder="Describe what happened and what needs attention..."></textarea></label><button class="primary" type="button" id="mightSubmitIssue">Submit Issue</button><div id="mightIssueMessage" class="muted"></div></div></section>';
-        document.getElementById('pageTitle')?.replaceChildren(document.createTextNode('Report Issues'));
-        document.getElementById('mightSubmitIssue')?.addEventListener('click',()=>{
-          const msg=document.getElementById('mightIssueMessage');
-          const desc=document.getElementById('mightIssueDescription')?.value.trim();
-          if(!desc){if(msg)msg.textContent='Please describe the issue before submitting.';return;}
-          if(msg)msg.textContent='Issue captured. Connect this form to your issue table/workflow when ready.';
-        });
-      }
+      let host=root.querySelector('#dispatchWorkspaceHost');
+      if(!host){host=document.createElement('div');host.id='dispatchWorkspaceHost';root.appendChild(host)}
+      host.innerHTML='<section class="dw-panel"><header class="dw-header"><div><div class="dw-kicker">DISPATCH SUPPORT</div><h1>Report Issues</h1><p>Capture an operational issue for the dispatch team.</p></div></header><div style="padding:20px;display:grid;gap:14px;max-width:720px"><label>Issue type<select id="mightIssueType"><option>Load issue</option><option>Carrier issue</option><option>Customer issue</option><option>Dispatcher issue</option><option>Other</option></select></label><label>Description<textarea id="mightIssueDescription" rows="6" placeholder="Describe what happened and what needs attention..."></textarea></label><button class="primary" type="button" id="mightSubmitIssue">Submit Issue</button><div id="mightIssueMessage" class="muted"></div></div></section>';
+      document.getElementById('pageTitle')?.replaceChildren(document.createTextNode('Report Issues'));
+      document.getElementById('mightSubmitIssue')?.addEventListener('click',()=>{
+        const msg=document.getElementById('mightIssueMessage');
+        if(msg)msg.textContent='The issue workflow is not connected to a database yet. The page is ready for the issue table/workflow to be wired in.';
+      });
       return;
     }
     const trigger=document.querySelector('#dispatch [data-k="'+view+'"], #dispatch [data-jump="'+view+'"]');
@@ -124,24 +121,8 @@
     });
   }
 
-  function installNavigation(){
-    if(window.mightSidebarNavigationClicksInstalled)return;
-    window.mightSidebarNavigationClicksInstalled=true;
-    document.addEventListener('click',async e=>{
-      const a=e.target.closest('.sidebar nav a[data-section]');
-      if(!a||!window.mightAdminRouter?.showSection)return;
-      const section=a.dataset.section;
-      const view=a.dataset.dispatchView||'';
-      e.preventDefault();e.stopImmediatePropagation();
-      setActive(section,view);
-      await window.mightAdminRouter.showSection(section,true);
-      if(section==='dispatch'&&view)dispatchView(view);
-    },true);
-  }
-
   function init(){
     if(!install())return;
-    installNavigation();
     const current=(location.hash||'#dashboard').slice(1).split('/');
     if(current[0]==='dispatch'&&current[1])setTimeout(()=>dispatchView(current[1]),250);
     else setActive(current[0]||'dashboard',current[1]||'');
