@@ -11,7 +11,12 @@
       quotes.classList.add('content','hidden');
     }
   }
-  function showSection(section, pushHash){
+  function refreshSection(section){
+    const ids={quotes:'refresh',loads:'loadRefresh',customers:'customerRefresh',carriers:'carrierRefresh',brokers:'brokerRefresh'};
+    const id=ids[section];
+    if(id) setTimeout(()=>document.getElementById(id)?.click(),0);
+  }
+  function showSection(section,pushHash){
     moveQuotesOutOfDashboard();
     hideAll();
     const target=document.getElementById(section);
@@ -24,11 +29,7 @@
       const next=`#${section}`;
       if(location.hash!==next) history.replaceState(null,'',next);
     }
-    if(section==='quotes' && typeof window.loadQuotes==='function') window.loadQuotes();
-    if(section==='loads' && typeof window.mightLoads?.loadLoads==='function') window.mightLoads.loadLoads();
-    if(section==='customers' && typeof window.mightCRM?.loadCRM==='function') window.mightCRM.loadCRM();
-    if(section==='carriers' && typeof window.mightCarriers?.loadCarriers==='function') window.mightCarriers.loadCarriers();
-    if(section==='brokers' && typeof window.mightBrokers?.loadBrokers==='function') window.mightBrokers.loadBrokers();
+    if(section!=='dashboard') refreshSection(section);
   }
   function init(){
     moveQuotesOutOfDashboard();
