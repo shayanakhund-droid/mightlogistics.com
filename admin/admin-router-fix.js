@@ -3,9 +3,9 @@
   function loadEnhancements(){return loadScript('enhancements.js?v=8','mightEnhancementsLoaded')}
   function loadDashboardV2(){return loadScript('dashboard-v2.js?v=3','mightDashboardV2Loaded')}
   function loadDashboardTheme(){return loadScript('dashboard-theme.js?v=1','mightDashboardThemeLoaded')}
-  function loadDispatchAdmin(){return loadScript('dispatch-admin.js?v=1','mightDispatchAdminLoaded')}
+  function loadDispatchAdmin(){return loadScript('dispatch-admin.js?v=2','mightDispatchAdminLoaded')}
   function loadDispatcherAccess(){return loadScript('dispatcher-access.js?v=2','mightDispatcherAccessLoaded')}
-  function loadBusinessSwitcher(){return loadScript('business-switcher.js?v=1','mightBusinessSwitcherLoaded')}
+  function loadBusinessSwitcher(){return loadScript('business-switcher.js?v=2','mightBusinessSwitcherLoaded')}
   function hideLegacyDashboard(){if(document.getElementById('mightDashboardLegacyStyle'))return;const s=document.createElement('style');s.id='mightDashboardLegacyStyle';s.textContent='#dashboard>.stats,#dashboard>#mightOverview{display:none!important}';document.head.appendChild(s)}
   function hideAll(){document.querySelectorAll('main .content').forEach(el=>el.classList.add('hidden'))}
   function moveQuotesOutOfDashboard(){const quotes=document.getElementById('quotes'),dashboard=document.getElementById('dashboard'),main=document.querySelector('main.main');if(quotes&&dashboard&&main&&quotes.parentElement===dashboard){main.insertBefore(quotes,document.getElementById('loads')||null);quotes.classList.add('content','hidden')}}
