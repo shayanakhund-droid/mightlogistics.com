@@ -40,19 +40,25 @@
   }
 
   async function generateAndEmail(){
-    const b=$('rateconGenerateAction');let rateTab=null;
+    const b=$('rateconGenerateAction');let rateTab=null,mailTab=null;
     try{
-      const load=await getLoad();
-      if(!load){alert('Save the load first.');return}
-      if(load.status!=='carrier_assigned'){alert('Set the load status to Carrier Assigned and save it first.');return}
-      if(!load.carrier_id){alert('Assign a carrier before generating the rate confirmation.');return}
-
-      // Open synchronously from the button click so Chrome does not turn the preview into an unusable blank tab.
+      // IMPORTANT: create both windows immediately from the user's click, before ANY await.
+      // This preserves Chrome's user-gesture permission and prevents the popup blocker/about:blank issue.
       rateTab=window.open('about:blank','_blank');
+      mailTab=window.open('about:blank','_blank');
       if(rateTab){
         rateTab.document.title='Might Logistics — Generating Rate Confirmation';
         rateTab.document.body.innerHTML='<div style="font-family:Arial,sans-serif;padding:40px;color:#17202b"><strong>Might Logistics</strong><p>Generating your Rate Confirmation…</p></div>';
       }
+      if(mailTab){
+        mailTab.document.title='Might Logistics — Preparing Email';
+        mailTab.document.body.innerHTML='<div style="font-family:Arial,sans-serif;padding:40px;color:#17202b"><strong>Might Logistics</strong><p>Preparing your Gmail message…</p></div>';
+      }
+
+      const load=await getLoad();
+      if(!load){throw new Error('Save the load first.');}
+      if(load.status!=='carrier_assigned'){throw new Error('Set the load status to Carrier Assigned and save it first.');}
+      if(!load.carrier_id){throw new Error('Assign a carrier before generating the rate confirmation.');}
 
       if(b){b.disabled=true;b.textContent='Generating…'}
       await saveOperational(load);
@@ -72,11 +78,7 @@
         payload.created_by=user?.id||null;const {error}=await db.from('load_documents').insert(payload);if(error)throw error;
       }
 
-      // Render the generated HTML directly into the already-authorized tab. No blob URL navigation, so no about:blank failure.
-      if(!showHtml(rateTab,html)){
-        rateTab=window.open('about:blank','_blank');
-        if(!showHtml(rateTab,html))throw new Error('Your browser blocked the Rate Confirmation window. Please allow pop-ups for this site.');
-      }
+      if(!showHtml(rateTab,html))throw new Error('Chrome blocked the Rate Confirmation window. Allow pop-ups for mightlogistics.com and try again.');
 
       let email='';
       const {data:carrier,error:carrierError}=await db.from('carriers').select('email').eq('id',l.carrier_id).maybeSingle();
@@ -85,10 +87,17 @@
         const subject=`Might Logistics Rate Confirmation — ${l.load_number}`;
         const body=`Hello ${l.carrier_name||'Carrier'},\n\nPlease find the rate confirmation for load ${l.load_number}.\n\nPickup: ${l.origin} — ${l.pickup_date||'—'} ${l.pickup_time_from||''}${l.pickup_time_to?' – '+l.pickup_time_to:''}\nDelivery: ${l.destination} — ${l.delivery_date||'—'} ${l.delivery_time_from||''}${l.delivery_time_to?' – '+l.delivery_time_to:''}\nCarrier Rate: $${Number(l.carrier_rate||0).toLocaleString('en-US',{minimumFractionDigits:2})} USD\n\nThe rate confirmation has been generated in the Might Logistics portal. Please review it, print/save it as PDF if needed, sign it, and return the signed copy.\n\nThank you,\nMight Logistics`;
         const mailUrl=`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        const mailTab=window.open(mailUrl,'_blank');
-        if(!mailTab)alert('Rate confirmation generated successfully, but Chrome blocked the Gmail compose window. Allow pop-ups for mightlogistics.com and click the email button again.');
+        if(mailTab&&!mailTab.closed){
+          mailTab.location.href=mailUrl;
+        }else{
+          alert('Rate confirmation generated successfully, but Chrome blocked the Gmail compose window. Allow pop-ups for mightlogistics.com and try again.');
+        }
       }else{
-        alert('Rate confirmation generated successfully. The carrier does not have an email address on file, so Gmail was not opened.');
+        if(mailTab&&!mailTab.closed){
+          mailTab.document.open();
+          mailTab.document.write('<div style="font-family:Arial,sans-serif;padding:40px;color:#17202b"><h2>Rate Confirmation Generated</h2><p>No carrier email address is saved, so a Gmail draft could not be prepared.</p></div>');
+          mailTab.document.close();
+        }else alert('Rate confirmation generated successfully. The carrier does not have an email address on file, so Gmail was not opened.');
       }
     }catch(err){
       console.error(err);
@@ -96,6 +105,11 @@
         rateTab.document.open();
         rateTab.document.write('<div style="font-family:Arial,sans-serif;padding:40px;color:#b42318"><h2>Rate Confirmation could not be generated</h2><p>'+String(err.message||err).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</p></div>');
         rateTab.document.close();
+      }
+      if(mailTab&&!mailTab.closed){
+        mailTab.document.open();
+        mailTab.document.write('<div style="font-family:Arial,sans-serif;padding:40px;color:#b42318"><h2>Email could not be prepared</h2><p>The Rate Confirmation workflow stopped before the Gmail draft could be prepared.</p></div>');
+        mailTab.document.close();
       }
       alert(`Rate confirmation failed: ${err.message||err}`);
     }finally{
