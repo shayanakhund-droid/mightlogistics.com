@@ -1,6 +1,7 @@
 (function(){
   const db=window.mightDb;if(!db)return;
   const $=id=>document.getElementById(id);
+  const NativeBlob=window.Blob;
   let profile=null,profileLoadId='',patchedBlob=false,patchedDocs=false;
   const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
   const loadId=()=>$('loadForm')?.dataset.id||'';
@@ -27,15 +28,14 @@
   function decorate(content,p=profile){
     if(typeof content!=='string'||!p)return content;
     const rows=`<div class="kv"><span>Broker Name</span><b>${esc(p.full_name||'—')}</b></div><div class="kv"><span>Broker Email</span><b>${esc(p.email||'—')}</b></div><div class="kv"><span>Broker Phone</span><b>${esc(p.phone||'—')}</b></div>`;
-    let out=content.replace(/<div class="kv"><span>Broker Name<\/span><b>[\s\S]*?<\/b><\/div><div class="kv"><span>Broker Email<\/span><b>[\s\S]*?<\/b></div><div class="kv"><span>Broker Phone<\/span><b>[\s\S]*?<\/b><\/div>/g,'');
+    let out=content.replace(/<div class="kv"><span>Broker Name<\/span><b>[\s\S]*?<\/b><\/div><div class="kv"><span>Broker Email<\/span><b>[\s\S]*?<\/b><\/div><div class="kv"><span>Broker Phone<\/span><b>[\s\S]*?<\/b><\/div>/g,'');
     const old='<div class="kv"><span>Broker</span><b>Might Logistics</b></div>';
     if(out.includes(old))out=out.replace(old,old+rows);
     return out;
   }
 
   function patchBlob(){
-    if(patchedBlob)return;
-    const NativeBlob=window.Blob;if(!NativeBlob)return;
+    if(patchedBlob||!NativeBlob)return;
     class BrokerBlob extends NativeBlob{
       constructor(parts,options){
         try{
