@@ -1,1 +1,1 @@
-// PATCH PLACEHOLDER
+// RESTORE REQUIRED: fetch previous blob and restore before modification
