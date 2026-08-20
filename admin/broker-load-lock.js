@@ -3,11 +3,9 @@
   if(!db)return;
   const $=id=>document.getElementById(id);
   let patched=false;
-
   function isBroker(){return window.mightCurrentProfile?.access_level==='broker';}
   function currentId(){return window.mightCurrentUser?.id||window.mightCurrentProfile?.id||null;}
   function currentName(){return window.mightCurrentProfile?.full_name||window.mightCurrentUser?.email||'Broker';}
-
   function patchSupabase(){
     if(patched)return;
     try{
@@ -34,7 +32,6 @@
       patched=true;
     }catch(e){console.error('Broker load enforcement patch failed:',e)}
   }
-
   async function loadAssignment(){
     if(!isBroker())return;
     const form=$('loadForm');
@@ -44,7 +41,6 @@
     const input=$('load_brokerDisplay');
     if(input)input.value=String(data.assigned_employee||'')===String(currentId())?currentName():'Assigned load';
   }
-
   function lockBrokerField(){
     if(!isBroker())return;
     const select=$('load_brokerId');
@@ -63,7 +59,6 @@
     const input=$('load_brokerDisplay');
     if(input){input.value=currentName();input.readOnly=true;input.tabIndex=-1;input.onkeydown=e=>e.preventDefault()}
   }
-
   function init(){
     patchSupabase();
     setInterval(()=>{patchSupabase();lockBrokerField()},250);
