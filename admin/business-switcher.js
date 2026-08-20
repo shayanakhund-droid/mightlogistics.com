@@ -7,7 +7,7 @@
     const s=document.createElement('script');if(id)s.id=id;s.src=src;s.onerror=()=>console.error('Could not load',src);document.body.appendChild(s);
   }
   function ensureBrokerage(){loadScript('brokerage-admin.js?v=9','brokerageAdminScript');}
-  function ensureDispatch(){loadScript('dispatch-v2.js?v=4','dispatchAdminScript');loadScript('dispatcher-access.js?v=4','dispatcherAccessScript');}
+  function ensureDispatch(){loadScript('dispatch-v2.js?v=5','dispatchAdminScript');loadScript('dispatcher-access.js?v=4','dispatcherAccessScript');}
   async function getAccess(){
     try{
       const {data:{user}}=await db.auth.getUser();
@@ -41,6 +41,10 @@
     if(!allowedAdmin)return;
     const sub=document.getElementById('dispatchSubnav');sub?.querySelectorAll('a').forEach(a=>a.classList.toggle('active',a.dataset.dview===view));
     const root=document.getElementById('dispatch');if(!root)return;
+    // The dispatch header, KPIs and charts belong only to Overview. The other sidebar views must be clean standalone workspaces.
+    root.querySelector('.dv2-head')?.classList.toggle('hidden',view!=='overview');
+    root.querySelector('.dv2-kpis')?.classList.toggle('hidden',view!=='overview');
+    root.querySelector('.dv2-chartgrid')?.classList.toggle('hidden',view!=='overview');
     root.querySelectorAll('.dv2-view').forEach(x=>x.classList.add('hidden'));
     root.querySelectorAll('.dv2-section').forEach(x=>x.classList.toggle('hidden',view!=='overview'));
     const target=root.querySelector(`.dv2-view[data-view="${view}"]`);if(target)target.classList.remove('hidden');
