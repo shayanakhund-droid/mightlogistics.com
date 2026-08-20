@@ -1,122 +1,27 @@
 (function(){
   const PHONE_SELECTOR='input[id*="phone" i],input[name*="phone" i],input[autocomplete="tel"]';
-  const EQUIPMENT_OPTIONS=[
-    'Dry Van','Reefer','Power Only','Straight Truck','16 ft Box Truck','24 ft Box Truck','26 ft Box Truck',
-    'Sprinter Van','Cargo Van','48 ft Van','53 ft Van','Flatbed','48 ft Flatbed','53 ft Flatbed','Step Deck',
-    'Conestoga','Double Drop','RGN / Removable Gooseneck','Lowboy','Flatbed Hotshot 40 ft','Flatbed Hotshot 30 ft',
-    'Hotshot 20 ft','Hotshot 16 ft','Hotshot','LTL','Expedited','Intermodal','Container','Tanker','Dry Bulk / Hopper',
-    'Dump Trailer','End Dump','Walking Floor','B-Train','Curtain Side','Car Hauler / Auto Transport',
-    'Refrigerated Straight Truck','Box Truck with Liftgate','Cargo Van with Liftgate','Other'
-  ];
+  const EQUIPMENT_OPTIONS=['Dry Van','Reefer','Power Only','Straight Truck','16 ft Box Truck','24 ft Box Truck','26 ft Box Truck','Sprinter Van','Cargo Van','48 ft Van','53 ft Van','Flatbed','48 ft Flatbed','53 ft Flatbed','Step Deck','Conestoga','Double Drop','RGN / Removable Gooseneck','Lowboy','Flatbed Hotshot 40 ft','Flatbed Hotshot 30 ft','Hotshot 20 ft','Hotshot 16 ft','Hotshot','LTL','Expedited','Intermodal','Container','Tanker','Dry Bulk / Hopper','Dump Trailer','End Dump','Walking Floor','B-Train','Curtain Side','Car Hauler / Auto Transport','Refrigerated Straight Truck','Box Truck with Liftgate','Cargo Van with Liftgate','Other'];
+  function digits(value){let d=String(value||'').replace(/\D/g,'');if(d.length===11&&d[0]==='1')d=d.slice(1);return d.slice(0,10)}
+  function formatPhone(value){const d=digits(value);if(!d)return '';if(d.length<4)return`(${d}`;if(d.length<7)return`(${d.slice(0,3)}) ${d.slice(3)}`;return`(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`}
+  function formatPhoneInputs(root=document){root.querySelectorAll?.(PHONE_SELECTOR).forEach(input=>{input.setAttribute('inputmode','tel');input.setAttribute('maxlength','14');input.setAttribute('placeholder','(XXX) XXX-XXXX');if(!input.dataset.phoneEnhanced){input.dataset.phoneEnhanced='1';input.addEventListener('input',()=>{input.value=formatPhone(input.value);if(document.activeElement===input)input.setSelectionRange(input.value.length,input.value.length)});if(input.value)input.value=formatPhone(input.value)}})}
+  function formatPhoneLinks(root=document){root.querySelectorAll?.('a[href^="tel:"]').forEach(a=>{const formatted=formatPhone(a.textContent);if(!formatted)return;const digitsOnly=digits(formatted);a.textContent=formatted;a.setAttribute('href',`tel:+1${digitsOnly}`)})}
+  function setupEquipment(){const input=document.getElementById('load_equipment');if(!input||input.dataset.equipmentEnhanced)return;const select=document.createElement('select');select.id=input.id;select.name=input.name||'equipment';select.className=input.className;select.required=input.required;select.innerHTML='<option value="">Select equipment</option>'+EQUIPMENT_OPTIONS.map(x=>`<option>${x}</option>`).join('');input.replaceWith(select);select.dataset.equipmentEnhanced='1'}
+  function setupLocationAutocomplete(input){if(!input||input.dataset.locationEnhanced)return;input.dataset.locationEnhanced='1';const parent=input.parentElement;if(parent)parent.style.position='relative';const menu=document.createElement('div');menu.className='location-suggestions';menu.style.cssText='position:absolute;left:0;right:0;top:calc(100% + 3px);z-index:200;background:#fff;border:1px solid #d9dee8;border-radius:9px;box-shadow:0 14px 35px rgba(0,0,0,.14);overflow:hidden;display:none;text-transform:none;letter-spacing:0;font-weight:500;';parent?.appendChild(menu);let timer=null,controller=null,results=[];function close(){menu.style.display='none';menu.innerHTML=''}function choose(item){input.value=item.label;close()}async function search(){const q=input.value.trim();if(q.length<2){close();return}if(controller)controller.abort();controller=new AbortController();try{const url=`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8&countrycode=US&bbox=-125,24,-66,50&layer=city&layer=locality&lang=en`;const response=await fetch(url,{signal:controller.signal});if(!response.ok)throw new Error('Location search failed');const data=await response.json();results=(data.features||[]).map(f=>f.properties||{}).filter(p=>p.name&&String(p.countrycode||'US').toUpperCase()==='US').map(p=>{const city=p.name||p.city||p.locality;const state=p.state||'';return{label:state?`${city}, ${state}`:city}}).filter((v,i,a)=>a.findIndex(x=>x.label.toLowerCase()===v.label.toLowerCase())===i);if(!results.length){close();return}menu.innerHTML=results.map((r,i)=>`<button type="button" data-index="${i}" style="display:block;width:100%;padding:10px 12px;border:0;border-bottom:1px solid #eef1f5;background:#fff;text-align:left;font:inherit;color:#172033;cursor:pointer">${r.label}</button>`).join('');menu.style.display='block';menu.querySelectorAll('button').forEach(b=>b.addEventListener('mousedown',e=>{e.preventDefault();choose(results[Number(b.dataset.index)])}))}catch(e){if(e.name!=='AbortError')close()}}
+    input.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(search,300)});input.addEventListener('focus',()=>{if(input.value.trim().length>=2){clearTimeout(timer);timer=setTimeout(search,50)}});document.addEventListener('click',e=>{if(!parent?.contains(e.target))close()})}
+  function setupLoads(){setupEquipment();setupLocationAutocomplete(document.getElementById('load_origin'));setupLocationAutocomplete(document.getElementById('load_destination'));formatPhoneInputs(document)}
 
-  function digits(value){
-    let d=String(value||'').replace(/\D/g,'');
-    if(d.length===11&&d[0]==='1') d=d.slice(1);
-    return d.slice(0,10);
-  }
-  function formatPhone(value){
-    const d=digits(value);
-    if(!d)return '';
-    if(d.length<4)return `(${d}`;
-    if(d.length<7)return `(${d.slice(0,3)}) ${d.slice(3)}`;
-    return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
-  }
-  function formatPhoneInputs(root=document){
-    root.querySelectorAll?.(PHONE_SELECTOR).forEach(input=>{
-      input.setAttribute('inputmode','tel');
-      input.setAttribute('maxlength','14');
-      input.setAttribute('placeholder','(XXX) XXX-XXXX');
-      if(!input.dataset.phoneEnhanced){
-        input.dataset.phoneEnhanced='1';
-        input.addEventListener('input',()=>{
-          input.value=formatPhone(input.value);
-          if(document.activeElement===input) input.setSelectionRange(input.value.length,input.value.length);
-        });
-        if(input.value) input.value=formatPhone(input.value);
-      }
-    });
-  }
-  function formatPhoneLinks(root=document){
-    root.querySelectorAll?.('a[href^="tel:"]').forEach(a=>{
-      const formatted=formatPhone(a.textContent);
-      if(!formatted)return;
-      const digitsOnly=digits(formatted);
-      const desiredHref=`tel:+1${digitsOnly}`;
-      if(a.textContent!==formatted) a.textContent=formatted;
-      if(a.getAttribute('href')!==desiredHref) a.setAttribute('href',desiredHref);
-    });
-  }
+  function addDashboardStyles(){if(document.getElementById('mightOverviewStyles'))return;const s=document.createElement('style');s.id='mightOverviewStyles';s.textContent=`
+.might-overview{margin-bottom:22px}.might-overview-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:14px 0 18px}.might-ov-card{appearance:none;text-align:left;background:#fff;border:1px solid #e5e9ef;border-radius:15px;padding:18px;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;animation:mightOvIn .45s ease both}.might-ov-card:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(18,35,55,.1);border-color:#cbd4df}.might-ov-card .label{font-size:11px;letter-spacing:.1em;color:#7b8797;font-weight:800}.might-ov-card strong{display:block;font-size:28px;margin-top:7px}.might-ov-card small{display:block;color:#66768a;margin-top:6px;font-size:12px}.might-ov-charts{display:grid;grid-template-columns:1.15fr .85fr;gap:14px}.might-chart-panel{background:#fff;border:1px solid #e5e9ef;border-radius:16px;padding:20px}.might-chart-panel h3{margin:3px 0 5px}.might-chart-panel p{margin:0;color:#66768a;font-size:13px}.might-bars{height:185px;display:flex;align-items:flex-end;gap:10px;margin-top:20px}.might-bar-wrap{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:7px;background:transparent;border:0;cursor:pointer}.might-bar{width:min(48px,72%);background:#172033;border-radius:8px 8px 3px 3px;min-height:7px;transition:height .5s cubic-bezier(.2,.8,.2,1),transform .2s,opacity .2s}.might-bar-wrap:hover .might-bar{transform:translateY(-3px);opacity:.78}.might-bar-label{font-size:11px;color:#66768a;text-align:center}.might-donut{width:190px;height:190px;border-radius:50%;margin:18px auto 10px;position:relative}.might-donut:after{content:'';position:absolute;inset:30px;border-radius:50%;background:#fff}.might-donut-center{position:absolute;inset:0;z-index:2;display:grid;place-items:center;text-align:center;font-size:24px;font-weight:800}.might-donut-center small{display:block;font-size:11px;color:#66768a;font-weight:500}.might-legend{display:grid;gap:6px}.might-legend button{display:flex;justify-content:space-between;border:0;background:transparent;padding:8px;border-radius:8px;cursor:pointer;font:inherit;color:#172033}.might-legend button:hover{background:#f5f7fa}.might-modal{position:fixed;inset:0;z-index:120;background:rgba(9,20,33,.46);display:grid;place-items:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s}.might-modal.open{opacity:1;pointer-events:auto}.might-modal-card{width:min(800px,100%);max-height:82vh;overflow:auto;background:#fff;border-radius:18px;border:1px solid #e5e9ef;box-shadow:0 30px 90px rgba(0,0,0,.18);transform:translateY(12px) scale(.98);transition:transform .25s}.might-modal.open .might-modal-card{transform:none}.might-modal-head{display:flex;justify-content:space-between;align-items:start;padding:22px 24px;border-bottom:1px solid #e5e9ef}.might-modal-head h2{margin:4px 0}.might-modal-body{padding:24px}.might-detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.might-detail{border:1px solid #e5e9ef;border-radius:12px;padding:14px}.might-detail span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#7b8797;font-weight:800}.might-detail strong{display:block;margin-top:5px;font-size:16px}.might-list{display:grid;gap:9px;margin-top:16px}.might-list button{background:#f7f9fb;border:1px solid #e7ebf0;border-radius:11px;padding:12px;text-align:left;cursor:pointer}.might-list button:hover{background:#eef2f6}.might-list .sub{display:block;color:#66768a;font-size:12px;margin-top:3px}@keyframes mightOvIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}@media(max-width:1000px){.might-overview-cards{grid-template-columns:1fr 1fr}.might-ov-charts{grid-template-columns:1fr}}@media(max-width:600px){.might-overview-cards{grid-template-columns:1fr}.might-detail-grid{grid-template-columns:1fr}}
+`;document.head.appendChild(s)}
 
-  function setupEquipment(){
-    const input=document.getElementById('load_equipment');
-    if(!input||input.dataset.equipmentEnhanced)return;
-    const select=document.createElement('select');
-    select.id=input.id; select.name=input.name||'equipment'; select.className=input.className; select.required=input.required;
-    select.innerHTML='<option value="">Select equipment</option>'+EQUIPMENT_OPTIONS.map(x=>`<option>${x}</option>`).join('');
-    input.replaceWith(select);
-    select.dataset.equipmentEnhanced='1';
-  }
-
-  function setupLocationAutocomplete(input){
-    if(!input||input.dataset.locationEnhanced)return;
-    input.dataset.locationEnhanced='1';
-    const parent=input.parentElement;
-    if(parent) parent.style.position='relative';
-    const menu=document.createElement('div');
-    menu.className='location-suggestions';
-    menu.style.cssText='position:absolute;left:0;right:0;top:calc(100% + 3px);z-index:200;background:#fff;border:1px solid #d9dee8;border-radius:9px;box-shadow:0 14px 35px rgba(0,0,0,.14);overflow:hidden;display:none;text-transform:none;letter-spacing:0;font-weight:500;';
-    parent?.appendChild(menu);
-    let timer=null, controller=null, results=[];
-    function close(){menu.style.display='none';menu.innerHTML='';}
-    function choose(item){
-      input.value=item.label;
-      close();
-    }
-    async function search(){
-      const q=input.value.trim();
-      if(q.length<2){close();return;}
-      if(controller)controller.abort();
-      controller=new AbortController();
-      try{
-        const url=`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8&countrycode=US&bbox=-125,24,-66,50&layer=city&layer=locality&lang=en`;
-        const response=await fetch(url,{signal:controller.signal});
-        if(!response.ok)throw new Error('Location search failed');
-        const data=await response.json();
-        results=(data.features||[]).map(f=>f.properties||{}).filter(p=>p.name&&String(p.countrycode||'US').toUpperCase()==='US').map(p=>{
-          const city=p.name || p.city || p.locality;
-          const state=p.state || '';
-          return {label:state?`${city}, ${state}`:city};
-        }).filter((v,i,a)=>a.findIndex(x=>x.label.toLowerCase()===v.label.toLowerCase())===i);
-        if(!results.length){close();return;}
-        menu.innerHTML=results.map((r,i)=>`<button type="button" data-index="${i}" style="display:block;width:100%;padding:10px 12px;border:0;border-bottom:1px solid #eef1f5;background:#fff;text-align:left;font:inherit;color:#172033;cursor:pointer">${r.label}</button>`).join('');
-        menu.style.display='block';
-        menu.querySelectorAll('button').forEach(b=>b.addEventListener('mousedown',e=>{e.preventDefault();choose(results[Number(b.dataset.index)]);}));
-      }catch(e){if(e.name!=='AbortError')close();}
-    }
-    input.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(search,300);});
-    input.addEventListener('focus',()=>{if(input.value.trim().length>=2){clearTimeout(timer);timer=setTimeout(search,50);}});
-    document.addEventListener('click',e=>{if(!parent?.contains(e.target))close();});
-  }
-
-  function setupLoads(){
-    setupEquipment();
-    setupLocationAutocomplete(document.getElementById('load_origin'));
-    setupLocationAutocomplete(document.getElementById('load_destination'));
-    formatPhoneInputs(document);
-  }
-
-  function init(){
-    setupLoads();
-    formatPhoneInputs(document);
-    formatPhoneLinks(document);
-    const observer=new MutationObserver(mutations=>{
-      const hasAddedNodes=mutations.some(m=>m.type==='childList' && m.addedNodes.length>0);
-      if(!hasAddedNodes)return;
-      setupLoads();
-      formatPhoneInputs(document);
-      formatPhoneLinks(document);
-    });
-    observer.observe(document.body,{childList:true,subtree:true});
-  }
+  function money(v){return Number(v||0).toLocaleString('en-US',{style:'currency',currency:'USD')}function fmtDate(v){if(!v)return'—';const d=new Date(String(v).length===10?v+'T00:00:00':v);return Number.isNaN(d.getTime())?'—':new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric'}).format(d)}function esc(v){return String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]))}
+  async function refreshDashboard(){const db=window.mightDb;if(!db)return;const q=window.quotes||[];const{data:loads}=await db.from('loads').select('id,load_number,status,origin,destination,pickup_date,customer_rate,carrier_rate,gross_margin,assigned_employee,created_at').order('created_at',{ascending:false});const ls=loads||[];const revenue=ls.reduce((a,l)=>a+Number(l.customer_rate||0),0);const margin=ls.reduce((a,l)=>a+Number(l.gross_margin||0),0);const active=ls.filter(l=>!['delivered','invoiced','paid','cancelled'].includes(l.status)).length;const delivered=ls.filter(l=>['delivered','invoiced','paid'].includes(l.status)).length;const newQuotes=q.filter(x=>x.status==='new').length;const cards=[['NEW QUOTES',newQuotes,'Requests awaiting review','quotes'],['ACTIVE LOADS',active,'Shipments requiring action','active'],['REVENUE',money(revenue),'Customer-rate value across loads','revenue'],['GROSS MARGIN',money(margin),`${revenue?(margin/revenue*100).toFixed(1):'0.0'}% blended margin`,'margin'],['BOOKED',ls.filter(l=>l.status==='booked').length,'Confirmed shipments','booked'],['DELIVERED',delivered,'Delivered / invoiced / paid','delivered'],['QUOTES',q.length,'All quote requests','allQuotes'],['LOADS',ls.length,'All load records','allLoads']];let o=document.getElementById('mightOverview');if(!o){const dash=document.getElementById('dashboard');if(!dash)return;o=document.createElement('section');o.id='mightOverview';o.className='might-overview';dash.insertBefore(o,dash.firstChild)}o.innerHTML=`<div class="eyebrow">OPERATIONS OVERVIEW</div><h3 style="margin:5px 0 0">Live performance</h3><div class="might-overview-cards">${cards.map((c,i)=>`<button class="might-ov-card" style="animation-delay:${i*45}ms" data-might-card="${c[3]}"><span class="label">${c[0]}</span><strong>${c[1]}</strong><small>${c[2]}</small></button>`).join('')}</div><div class="might-ov-charts"><section class="might-chart-panel"><div class="eyebrow">LOAD PIPELINE</div><h3>Loads by status</h3><p>Click a bar to inspect the records behind it.</p><div id="mightLoadBars" class="might-bars"></div></section><section class="might-chart-panel"><div class="eyebrow">QUOTE PIPELINE</div><h3>Quote mix</h3><p>Click a segment or legend item for detail.</p><div id="mightQuoteMix"></div></section></div>`;document.querySelectorAll('[data-might-card]').forEach(b=>b.addEventListener('click',()=>openOverviewDetail(b.dataset.mightCard,q,ls)));renderLoadBars(ls,q);renderQuoteMix(q);}
+  function renderLoadBars(ls,q){const defs=[['New','new'],['Booked','booked'],['Carrier','carrier_assigned'],['Dispatched','dispatched'],['Transit','in_transit'],['Delivered','delivered']];const vals=defs.map(d=>({label:d[0],key:d[1],value:ls.filter(l=>l.status===d[1]).length}));const max=Math.max(1,...vals.map(v=>v.value));const el=document.getElementById('mightLoadBars');if(!el)return;el.innerHTML=vals.map(v=>`<button class="might-bar-wrap" data-might-status="${v.key}"><span style="font-size:11px;font-weight:800">${v.value}</span><span class="might-bar" style="height:${Math.max(7,v.value/max*145)}px"></span><span class="might-bar-label">${v.label}</span></button>`).join('');el.querySelectorAll('[data-might-status]').forEach(b=>b.addEventListener('click',()=>openOverviewDetail('status',window.quotes||[],ls,b.dataset.mightStatus)))}
+  function renderQuoteMix(q){const defs=[['New','new'],['Reviewing','reviewing'],['Quoting','quoting'],['Quoted','quoted'],['Booked','booked'],['Lost','lost']];const vals=defs.map(d=>[d[0],q.filter(x=>x.status===d[1]).length]);const total=Math.max(1,vals.reduce((a,x)=>a+x[1],0));let angle=0;const stops=vals.map((v,i)=>{const st=angle;angle+=v[1]/total*360;return`#172033 ${st}deg ${angle}deg`}).join(',');const el=document.getElementById('mightQuoteMix');if(!el)return;el.innerHTML=`<div class="might-donut" style="background:conic-gradient(${stops})"><div class="might-donut-center">${q.length}<small>Total quotes</small></div></div><div class="might-legend">${vals.map((v,i)=>`<button data-quote-mix="${i}"><span>${v[0]}</span><strong>${v[1]}</strong></button>`).join('')}</div>`;el.querySelectorAll('[data-quote-mix]').forEach(b=>b.addEventListener('click',()=>openOverviewDetail('quoteMix',q,[],Number(b.dataset.quoteMix))))}
+  function listLoads(ls){if(!ls.length)return'<div class="notice">No records in this category.</div>';return`<div class="might-list">${ls.slice(0,30).map(l=>`<button data-admin-load="${esc(l.id)}"><strong>${esc(l.load_number)}</strong> · ${esc(l.origin)} → ${esc(l.destination)}<span class="sub">${esc(String(l.status||'').replace(/_/g,' '))} · ${money(l.customer_rate)} · Pickup ${fmtDate(l.pickup_date)}</span></button>`).join('')}</div>`}
+  function listQuotes(q){if(!q.length)return'<div class="notice">No quote requests in this category.</div>';return`<div class="might-list">${q.slice(0,30).map(x=>`<button data-admin-quote="${esc(x.id)}"><strong>ML-${String(x.quote_number).padStart(5,'0')}</strong> · ${esc(x.company_name)}<span class="sub">${esc(x.origin)} → ${esc(x.destination)} · ${esc(x.status)}</span></button>`).join('')}</div>`}
+  function openOverviewDetail(type,q,ls,value){let title='',body='',subset=[];if(type==='quotes'){title='New quote requests';subset=q.filter(x=>x.status==='new');body=listQuotes(subset)}else if(type==='active'){title='Active loads';subset=ls.filter(l=>!['delivered','invoiced','paid','cancelled'].includes(l.status));body=listLoads(subset)}else if(type==='booked'){title='Booked loads';subset=ls.filter(l=>l.status==='booked');body=listLoads(subset)}else if(type==='delivered'){title='Delivered loads';subset=ls.filter(l=>['delivered','invoiced','paid'].includes(l.status));body=listLoads(subset)}else if(type==='revenue'||type==='margin'){const key=type==='revenue'?'customer_rate':'gross_margin';const total=ls.reduce((a,l)=>a+Number(l[key]||0),0);title=type==='revenue'?'Revenue detail':'Gross margin detail';body=`<div class="might-detail-grid"><div class="might-detail"><span>Total</span><strong>${money(total)}</strong></div><div class="might-detail"><span>Loads</span><strong>${ls.length}</strong></div><div class="might-detail"><span>Average / load</span><strong>${money(ls.length?total/ls.length:0)}</strong></div><div class="might-detail"><span>Largest</span><strong>${money(Math.max(0,...ls.map(l=>Number(l[key]||0)))}</strong></div></div>${listLoads([...ls].sort((a,b)=>Number(b[key]||0)-Number(a[key]||0)))} `}else if(type==='allQuotes'){title='All quote requests';body=listQuotes(q)}else if(type==='allLoads'){title='All loads';body=listLoads(ls)}else if(type==='status'){title=`${String(value).replace(/_/g,' ')} loads`;body=listLoads(ls.filter(l=>l.status===value))}else if(type==='quoteMix'){const names=['New','Reviewing','Quoting','Quoted','Booked','Lost'];const keys=['new','reviewing','quoting','quoted','booked','lost'];title=`${names[value]} quotes`;body=listQuotes(q.filter(x=>x.status===keys[value]))}const modal=document.createElement('div');modal.className='might-modal';modal.innerHTML=`<div class="might-modal-card"><div class="might-modal-head"><div><div class="eyebrow">DETAIL VIEW</div><h2>${esc(title)}</h2></div><button class="close">×</button></div><div class="might-modal-body">${body}</div></div>`;document.body.appendChild(modal);requestAnimationFrame(()=>modal.classList.add('open'));const close=()=>{modal.classList.remove('open');setTimeout(()=>modal.remove(),180)};modal.querySelector('.close').addEventListener('click',close);modal.addEventListener('click',e=>{if(e.target===modal)close()});modal.querySelectorAll('[data-admin-load]').forEach(b=>b.addEventListener('click',()=>{close();if(typeof window.openLoad==='function')window.openLoad(b.dataset.adminLoad)}));modal.querySelectorAll('[data-admin-quote]').forEach(b=>b.addEventListener('click',()=>{close();if(typeof window.openQuote==='function')window.openQuote(b.dataset.adminQuote)}))}
+  window.refreshMightDashboard=refreshDashboard;
+  function init(){addDashboardStyles();setupLoads();formatPhoneInputs(document);formatPhoneLinks(document);const observer=new MutationObserver(mutations=>{if(mutations.some(m=>m.type==='childList'&&m.addedNodes.length)){setupLoads();formatPhoneInputs(document);formatPhoneLinks(document)}});observer.observe(document.body,{childList:true,subtree:true});setTimeout(()=>{if(window.mightDb)refreshDashboard()},900)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
