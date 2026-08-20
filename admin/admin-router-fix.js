@@ -1,9 +1,11 @@
 (function(){
   function loadScript(src,key){
     if(window[key])return Promise.resolve();
-    window[key]=true;
+    const id='might-loader-'+key;
+    if(document.getElementById(id))return Promise.resolve();
     return new Promise(resolve=>{
       const s=document.createElement('script');
+      s.id=id;
       s.src=src;
       s.onload=()=>resolve();
       s.onerror=()=>{console.error('Could not load '+src);resolve()};
@@ -52,9 +54,7 @@
     moveQuotesOutOfDashboard();
     hideAll();
 
-    if(section==='dispatch'){
-      window.initMightDispatchV2?.();
-    }
+    if(section==='dispatch')window.initMightDispatchV2?.();
 
     const target=document.getElementById(section);
     if(target)target.classList.remove('hidden');
@@ -97,7 +97,7 @@
     hideLegacyDashboard();
 
     // The business switcher is the single source of truth for Brokerage vs Dispatch.
-    // Do not create a second sidebar switcher here.
+    // Do not create a second workspace switcher here.
     window.initMightDispatchV2?.();
 
     document.addEventListener('click',function(e){
