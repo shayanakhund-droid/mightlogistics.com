@@ -1,8 +1,5 @@
 (function(){
   const WORKSPACES=['dashboard','quotes','loads','customers','carriers','brokers','dispatch'];
-  let activeSection=null;
-  let enforcing=false;
-  let observer=null;
 
   function $(id){return document.getElementById(id)}
 
@@ -44,74 +41,31 @@
   const loadDispatcherAccess=()=>loadScript('dispatcher-access.js?v=4','mightDispatcherAccessLoaded');
   const loadBusinessSwitcher=()=>loadScript('business-switcher.js?v=11','mightBusinessSwitcherLoaded');
 
-  function ensureDispatchRoot(){
-    let root=$('dispatch');
-    if(!root){
-      const main=document.querySelector('main.main');
-      if(!main)return null;
-      root=document.createElement('section');
-      root.id='dispatch';
-      root.className='content hidden';
-      main.appendChild(root);
-    }
-    return root;
-  }
-
-  // Quote Requests was originally nested inside #dashboard. Move every
-  // primary workspace to main so one workspace can never reveal another.
   function normalizeWorkspaces(){
     const main=document.querySelector('main.main');
-    if(!main)return null;
-    WORKSPACES.forEach(id=>{
-      if(id==='dispatch')return;
-      const el=$(id);
-      if(el && el.parentElement!==main)main.appendChild(el);
-    });
-    return main;
-  }
-
-  function hideAllWorkspaces(){
-    const main=normalizeWorkspaces();
     if(!main)return;
-    WORKSPACES.forEach(id=>{
-      const el=$(id);
-      if(!el || el.parentElement!==main)return;
-      el.classList.add('hidden');
-      el.removeAttribute('data-might-active');
-    });
+    const quotes=$('quotes');
+    if(quotes && quotes.parentElement!==main)main.appendChild(quotes);
+    const dispatch=$('dispatch');
+    if(dispatch && dispatch.parentElement!==main)main.appendChild(dispatch);
   }
 
   function setTitle(section){
-    const titles={
-      dashboard:'Operations Dashboard',
-      quotes:'Quote Requests',
-      loads:'Load Management',
-      customers:'Customer Management',
-      carriers:'Carrier Management',
-      brokers:'Broker Management',
-      dispatch:'Dispatch Operations'
-    };
+    const titles={dashboard:'Operations Dashboard',quotes:'Quote Requests',loads:'Load Management',customers:'Customer Management',carriers:'Carrier Management',brokers:'Broker Management',dispatch:'Dispatch Operations'};
     const title=$('pageTitle');
     if(title)title.textContent=titles[section]||'Operations Dashboard';
   }
 
-  function enforceWorkspace(section){
-    const main=normalizeWorkspaces();
-    if(!main)return;
-    enforcing=true;
-    try{
-      WORKSPACES.forEach(id=>{
-        const el=$(id);
-        if(!el || el.parentElement!==main)return;
-        const visible=id===section;
-        el.classList.toggle('hidden',!visible);
-        if(visible)el.setAttribute('data-might-active','true');
-        else el.removeAttribute('data-might-active');
-      });
-      setTitle(section);
-    }finally{
-      enforcing=false;
+  function setWorkspace(section){
+    normalizeWorkspaces();
+    for(const id of WORKSPACES){
+      const el=$(id);
+      if(!el)continue;
+      const visible=id===section;
+      el.classList.toggle('hidden',!visible);
+      el.setAttribute('data-might-active',visible?'true':'false');
     }
+    setTitle(section);
   }
 
   function refreshSection(section){
@@ -124,98 +78,38 @@
     if(window.mightDispatcherRestricted && section!=='dispatch')section='dispatch';
     if(!window.mightBusinessSwitcherAllowed && !window.mightDispatcherRestricted && section==='dispatch')section='dashboard';
 
-    activeSection=section;
-    normalizeWorkspaces();
-    hideAllWorkspaces();
-
-    if(section==='dispatch'){
-      const root=ensureDispatchRoot();
-      if(root){
-        root.classList.remove('hidden');
-        root.style.display='block';
-        root.style.visibility='visible';
-      }
-      if(window.initMightDispatchV2)window.initMightDispatchV2();
-      else setTimeout(()=>window.initMightDispatchV2?.(),150);
-    }
-
-    enforceWorkspace(section);
-
-    document.querySelectorAll('nav a[data-section]').forEach(a=>{
-      a.classList.toggle('active',a.dataset.section===section);
-    });
+    setWorkspace(section);
+    document.querySelectorAll('nav a[data-section]').forEach(a=>a.classList.toggle('active',a.dataset.section===section));
 
     if(pushHash){
       const next='#'+section;
       if(location.hash!==next)history.replaceState(null,'',next);
     }
 
-    if(refresh && section!=='dashboard' && section!=='dispatch')refreshSection(section);
-    if(section==='dashboard')setTimeout(()=>window.refreshMightDashboard?.(true),80);
+    if(section==='dispatch'){
+      if(window.initMightDispatchV2)window.initMightDispatchV2();
+    }else if(refresh && section!=='dashboard'){
+      refreshSection(section);
+    }else if(section==='dashboard'){
+      setTimeout(()=>window.refreshMightDashboard?.(true),80);
+    }
   }
 
-  function installNavigationGuard(){
-    const nav=document.querySelector('aside.sidebar nav');
-    if(!nav)return;
-
-    nav.addEventListener('click',e=>{
+  function installNavigation(){
+    document.addEventListener('click',e=>{
       const link=e.target.closest('a[data-section]');
       if(!link)return;
       const section=link.dataset.section;
       if(!WORKSPACES.includes(section))return;
-
-      // Existing modules have their own click handlers. Let them load their
-      // data, then make the central router authoritative on the same tick.
-      setTimeout(()=>showSection(section,true,false),0);
-    });
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      showSection(section,true,false);
+    },true);
 
     window.addEventListener('hashchange',()=>{
       const requested=(location.hash||'#dashboard').slice(1).split('/')[0]||'dashboard';
       showSection(WORKSPACES.includes(requested)?requested:'dashboard',false,false);
     });
-  }
-
-  function installWorkspaceGuard(){
-    const main=document.querySelector('main.main');
-    if(!main)return;
-
-    observer=new MutationObserver(()=>{
-      if(enforcing || !activeSection)return;
-
-      // Do not call showSection() from the observer. showSection() itself
-      // changes classes and DOM structure, which would cause the observer to
-      // fire again indefinitely and freeze the browser.
-      const active=$(activeSection);
-      if(!active || active.parentElement!==main)return;
-
-      let wrongVisible=false;
-      WORKSPACES.forEach(id=>{
-        const el=$(id);
-        if(!el || el.parentElement!==main)return;
-        const shouldBeVisible=id===activeSection;
-        const isVisible=!el.classList.contains('hidden');
-        if(shouldBeVisible!==isVisible)wrongVisible=true;
-      });
-
-      if(!wrongVisible)return;
-
-      enforcing=true;
-      try{
-        WORKSPACES.forEach(id=>{
-          const el=$(id);
-          if(!el || el.parentElement!==main)return;
-          const visible=id===activeSection;
-          el.classList.toggle('hidden',!visible);
-          if(visible)el.setAttribute('data-might-active','true');
-          else el.removeAttribute('data-might-active');
-        });
-        setTitle(activeSection);
-      }finally{
-        enforcing=false;
-      }
-    });
-
-    observer.observe(main,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
   }
 
   function hideLegacyDashboard(){
@@ -233,11 +127,8 @@
     await loadDashboardTheme();
 
     const profile=await getProfile();
-    const isAdmin=profile?.role==='admin' &&
-      profile?.access_level==='administrator' &&
-      profile?.is_active!==false;
-    const isDispatcher=profile?.access_level==='dispatcher' &&
-      profile?.is_active!==false;
+    const isAdmin=profile?.role==='admin' && profile?.access_level==='administrator' && profile?.is_active!==false;
+    const isDispatcher=profile?.access_level==='dispatcher' && profile?.is_active!==false;
 
     window.mightBusinessSwitcherAllowed=isAdmin;
 
@@ -249,13 +140,10 @@
     await loadBusinessSwitcher();
 
     normalizeWorkspaces();
-    installNavigationGuard();
-    installWorkspaceGuard();
+    installNavigation();
 
     const requested=(location.hash||'#dashboard').slice(1).split('/')[0]||'dashboard';
-    const resolved=isDispatcher
-      ? 'dispatch'
-      : (WORKSPACES.includes(requested)?requested:'dashboard');
+    const resolved=isDispatcher?'dispatch':(WORKSPACES.includes(requested)?requested:'dashboard');
 
     window.mightAdminRouter={showSection};
     showSection(resolved,false,true);
