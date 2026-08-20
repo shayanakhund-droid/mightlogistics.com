@@ -1,11 +1,21 @@
 (function(){
   if(window.mightBusinessSwitcherLoaded)return; window.mightBusinessSwitcherLoaded=true;
+  const db=window.mightDb;
+  let allowedAdmin=false;
   function loadScript(src,id){
     if(id&&document.getElementById(id))return;
     const s=document.createElement('script');if(id)s.id=id;s.src=src;s.onerror=()=>console.error('Could not load',src);document.body.appendChild(s);
   }
-  function ensureBrokerage(){loadScript('brokerage-admin.js?v=8','brokerageAdminScript');}
-  function ensureDispatch(){loadScript('dispatch-admin.js?v=8','dispatchAdminScript');loadScript('dispatcher-access.js?v=3','dispatcherAccessScript');}
+  function ensureBrokerage(){loadScript('brokerage-admin.js?v=9','brokerageAdminScript');}
+  function ensureDispatch(){loadScript('dispatch-v2.js?v=4','dispatchAdminScript');loadScript('dispatcher-access.js?v=4','dispatcherAccessScript');}
+  async function getAccess(){
+    try{
+      const {data:{user}}=await db.auth.getUser();
+      if(!user)return null;
+      const {data:p}=await db.from('employee_profiles').select('role,access_level,is_active').eq('id',user.id).maybeSingle();
+      return p||null;
+    }catch(e){console.error('Business access check failed',e);return null}
+  }
   function inject(){
     const nav=document.querySelector('aside.sidebar nav');
     if(!nav||document.getElementById('businessSwitcher')||document.getElementById('adminWorkspaceSwitcher'))return;
@@ -19,6 +29,7 @@
     ensureBrokerage();
   }
   function switchBusiness(mode){
+    if(!allowedAdmin)return;
     const wrap=document.getElementById('businessSwitcher');if(!wrap)return;
     wrap.querySelectorAll('.biz-switch button').forEach(b=>b.classList.toggle('active',b.dataset.business===mode));
     document.body.classList.toggle('biz-dispatch-mode',mode==='dispatch');
@@ -27,6 +38,7 @@
     else{ensureBrokerage();window.mightAdminRouter?.showSection('dashboard',false)}
   }
   function showDispatchView(view){
+    if(!allowedAdmin)return;
     const sub=document.getElementById('dispatchSubnav');sub?.querySelectorAll('a').forEach(a=>a.classList.toggle('active',a.dataset.dview===view));
     const root=document.getElementById('dispatch');if(!root)return;
     root.querySelectorAll('.dv2-view').forEach(x=>x.classList.add('hidden'));
@@ -34,7 +46,13 @@
     const target=root.querySelector(`.dv2-view[data-view="${view}"]`);if(target)target.classList.remove('hidden');
     const title=document.getElementById('pageTitle');const titles={overview:'Dispatch Operations',clients:'Dispatch Clients',fleet:'Client Fleet',loads:'Accepted Dispatch Loads',team:'Dispatchers',payments:'Dispatch Payments'};if(title)title.textContent=titles[view]||'Dispatch Operations';
   }
-  function init(){inject()}
+  async function init(){
+    const p=await getAccess();
+    allowedAdmin=p?.role==='admin'&&p?.access_level==='administrator'&&p?.is_active!==false;
+    window.mightBusinessSwitcherAllowed=allowedAdmin;
+    if(allowedAdmin)inject();
+    else ensureBrokerage();
+  }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else setTimeout(init,0);
   window.mightBusinessSwitcher={switchBusiness,showDispatchView};
 })();
