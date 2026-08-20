@@ -17,6 +17,10 @@
     document.querySelectorAll('nav a[data-section="brokers"]').forEach(x=>x.remove());
     $('brokers')?.remove();
     $('brokerModal')?.remove();
+    if(location.hash==='#brokers'){
+      history.replaceState(null,'','#dashboard');
+      window.mightAdminRouter?.showSection?.('dashboard');
+    }
     setupLoadBrokerFields();
   }
 
