@@ -179,32 +179,40 @@
     const main=document.querySelector('main.main');
     if(!main)return;
 
-    observer=new MutationObserver(mutations=>{
+    observer=new MutationObserver(()=>{
       if(enforcing || !activeSection)return;
-      let relevant=false;
 
-      for(const m of mutations){
-        if(m.type==='attributes' && m.attributeName==='class'){
-          const t=m.target;
-          if(t.parentElement===main && WORKSPACES.includes(t.id)){
-            relevant=true;
-            break;
-          }
-        }
+      // Do not call showSection() from the observer. showSection() itself
+      // changes classes and DOM structure, which would cause the observer to
+      // fire again indefinitely and freeze the browser.
+      const active=$(activeSection);
+      if(!active || active.parentElement!==main)return;
 
-        if(m.type==='childList'){
-          for(const n of m.addedNodes){
-            if(n.nodeType!==1)continue;
-            if(WORKSPACES.includes(n.id) || n.querySelector?.('#quotes,#loads,#customers,#carriers,#brokers,#dispatch')){
-              relevant=true;
-              break;
-            }
-          }
-          if(relevant)break;
-        }
+      let wrongVisible=false;
+      WORKSPACES.forEach(id=>{
+        const el=$(id);
+        if(!el || el.parentElement!==main)return;
+        const shouldBeVisible=id===activeSection;
+        const isVisible=!el.classList.contains('hidden');
+        if(shouldBeVisible!==isVisible)wrongVisible=true;
+      });
+
+      if(!wrongVisible)return;
+
+      enforcing=true;
+      try{
+        WORKSPACES.forEach(id=>{
+          const el=$(id);
+          if(!el || el.parentElement!==main)return;
+          const visible=id===activeSection;
+          el.classList.toggle('hidden',!visible);
+          if(visible)el.setAttribute('data-might-active','true');
+          else el.removeAttribute('data-might-active');
+        });
+        setTitle(activeSection);
+      }finally{
+        enforcing=false;
       }
-
-      if(relevant)showSection(activeSection,false,false);
     });
 
     observer.observe(main,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
