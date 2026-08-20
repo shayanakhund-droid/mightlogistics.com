@@ -22,7 +22,16 @@
   function loadDashboardTheme(){return loadScript('dashboard-theme.js?v=1','mightDashboardThemeLoaded')}
   function loadDispatchAdmin(){return loadScript('dispatch-v2.js?v=4','mightDispatchV2Loaded')}
   function loadDispatcherAccess(){return loadScript('dispatcher-access.js?v=4','mightDispatcherAccessLoaded')}
-  function loadBusinessSwitcher(){return loadScript('business-switcher.js?v=6','mightBusinessSwitcherLoaded')}
+  function loadBusinessSwitcher(){return loadScript('business-switcher.js?v=8','mightBusinessSwitcherLoaded')}
+  function removeLegacyDispatchNav(){document.querySelectorAll('aside.sidebar nav a[data-section="dispatch"],aside.sidebar nav a[href="#dispatch"]').forEach(a=>a.remove())}
+  function installLegacyNavGuard(){
+    removeLegacyDispatchNav();
+    const nav=document.querySelector('aside.sidebar nav');
+    if(!nav)return;
+    if(window.MIGHT_LEGACY_DISPATCH_GUARD)return;
+    window.MIGHT_LEGACY_DISPATCH_GUARD=true;
+    new MutationObserver(removeLegacyDispatchNav).observe(nav,{childList:true,subtree:true});
+  }
   function hideLegacyDashboard(){if(document.getElementById('mightDashboardLegacyStyle'))return;const s=document.createElement('style');s.id='mightDashboardLegacyStyle';s.textContent='#dashboard>.stats,#dashboard>#mightOverview{display:none!important}';document.head.appendChild(s)}
   function hideAll(){document.querySelectorAll('main .content').forEach(el=>el.classList.add('hidden'))}
   function moveQuotesOutOfDashboard(){const quotes=document.getElementById('quotes'),dashboard=document.getElementById('dashboard'),main=document.querySelector('main.main');if(quotes&&dashboard&&main&&quotes.parentElement===dashboard){main.insertBefore(quotes,document.getElementById('loads')||null);quotes.classList.add('content','hidden')}}
@@ -49,12 +58,12 @@
     window.mightBusinessSwitcherAllowed=isAdmin;
     if(isAdmin||isDispatcher){await loadDispatchAdmin();await loadDispatcherAccess();}
     await loadBusinessSwitcher();
-    moveQuotesOutOfDashboard();hideLegacyDashboard();
+    moveQuotesOutOfDashboard();hideLegacyDashboard();installLegacyNavGuard();
     document.addEventListener('click',function(e){
       const link=e.target.closest?.('nav a[data-section]');if(!link)return;
       if((window.mightDispatcherRestricted&&link.dataset.section!=='dispatch')||(!window.mightBusinessSwitcherAllowed&&!window.mightDispatcherRestricted&&link.dataset.section==='dispatch')){e.preventDefault();e.stopImmediatePropagation();showSection(window.mightDispatcherRestricted?'dispatch':'dashboard',true);return}
-      e.preventDefault();e.stopImmediatePropagation();const section=link.dataset.section;showSection(section,true);
-      if(section==='dispatch')window.mightBusinessSwitcher?.switchBusiness?.('dispatch');else window.mightBusinessSwitcher?.switchBusiness?.('brokerage');
+      e.preventDefault();e.stopImmediatePropagation();
+      showSection(link.dataset.section,true);
     },true);
     const requested=(location.hash||'#dashboard').slice(1);
     const initial=(!isAdmin&&!isDispatcher&&requested==='dispatch')?'dashboard':requested;
