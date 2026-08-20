@@ -122,6 +122,14 @@
     document.head.appendChild(s);
   }
 
+  function forceWelcomeVisibility(){
+    if($('mightAdminWelcomeVisibility'))return;
+    const s=document.createElement('style');
+    s.id='mightAdminWelcomeVisibility';
+    s.textContent='#dashboard>#adminWelcome{display:grid!important}';
+    document.head.appendChild(s);
+  }
+
   async function init(){
     hideLegacyDashboard();
     await loadEnhancements();
@@ -136,6 +144,7 @@
 
     if(isAdmin){
       await loadAdminWelcome();
+      forceWelcomeVisibility();
     }
 
     if(isAdmin||isDispatcher){
