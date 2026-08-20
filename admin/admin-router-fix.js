@@ -1,134 +1,26 @@
 (function(){
   const WORKSPACES=['dashboard','quotes','loads','customers','carriers','brokers','dispatch'];
   const $=id=>document.getElementById(id);
-
   function loadScript(src,key){
     if(window[key])return Promise.resolve();
-    const id='might-loader-'+key;
-    if($(id))return Promise.resolve();
-    return new Promise(resolve=>{
-      const s=document.createElement('script');
-      s.id=id;s.src=src;s.onload=resolve;s.onerror=()=>{console.error('Could not load '+src);resolve()};
-      document.head.appendChild(s);
-    });
+    const id='might-loader-'+key;if($(id))return Promise.resolve();
+    return new Promise(resolve=>{const s=document.createElement('script');s.id=id;s.src=src;s.onload=resolve;s.onerror=()=>{console.error('Could not load '+src);resolve()};document.head.appendChild(s)})
   }
-
-  async function getProfile(){
-    try{
-      const db=window.mightDb;if(!db)return null;
-      const {data:{user}}=await db.auth.getUser();
-      if(!user)return null;
-      const {data:p}=await db.from('employee_profiles').select('id,role,access_level,is_active,full_name,email').eq('id',user.id).maybeSingle();
-      return p||null;
-    }catch(e){console.error(e);return null}
-  }
-
+  async function getProfile(){try{const db=window.mightDb;if(!db)return null;const {data:{user}}=await db.auth.getUser();if(!user)return null;const {data:p}=await db.from('employee_profiles').select('id,role,access_level,is_active,full_name,email').eq('id',user.id).maybeSingle();return p||null}catch(e){console.error(e);return null}}
   const loadEnhancements=()=>loadScript('enhancements.js?v=9','mightEnhancementsLoaded');
   const loadWelcome=()=>loadScript('admin-welcome.js?v=2','mightAdminWelcomeLoaded');
   const loadBrokerage=()=>loadScript('brokerage-admin.js?v=10','mightBrokerageAdminLoaded');
   const loadDispatch=()=>Promise.all([loadScript('dispatch-v2.js?v=11','mightDispatchV2Loaded'),loadScript('dispatcher-access.js?v=4','mightDispatcherAccessLoaded')]);
   const loadSwitcher=()=>loadScript('business-switcher.js?v=12','mightBusinessSwitcherLoaded');
-
-  function normalize(){
-    const main=document.querySelector('main.main');if(!main)return;
-    const quotes=$('quotes');if(quotes&&quotes.parentElement!==main)main.appendChild(quotes);
-    const dispatch=$('dispatch');if(dispatch&&dispatch.parentElement!==main)main.appendChild(dispatch);
-  }
-
-  function title(section){
-    const titles={dashboard:'Operations Dashboard',quotes:'Quote Requests',loads:'Load Management',customers:'Customer Management',carriers:'Carrier Management',brokers:'Broker Management',dispatch:'Dispatch Operations',documents:'Documents',billing:'Billing',reports:'Reports'};
-    if($('pageTitle'))$('pageTitle').textContent=titles[section]||'Operations Dashboard';
-  }
-
-  function workspace(section){
-    normalize();
-    for(const id of WORKSPACES.concat(['documents','billing','reports'])){
-      const el=$(id);if(!el)continue;
-      el.classList.toggle('hidden',id!==section);el.setAttribute('data-might-active',id===section?'true':'false');
-    }
-    title(section);
-  }
-
-  function refresh(section){
-    const ids={quotes:'refresh',loads:'loadRefresh',customers:'customerRefresh',carriers:'carrierRefresh',brokers:'brokerRefresh',documents:'docRefresh',billing:'billingRefresh',reports:'reportRefresh'};
-    const id=ids[section];if(id)$(id)?.click();
-  }
-
-  async function showSection(section,pushHash=false,doRefresh=false){
-    if(window.mightDispatcherRestricted&&section!=='dispatch')section='dispatch';
-    if(!window.mightBusinessSwitcherAllowed&&section==='dispatch')section='dashboard';
-
-    if(['documents','billing','reports'].includes(section))await loadBrokerage();
-    if(section==='dispatch')await loadDispatch();
-
-    workspace(section);
-    document.querySelectorAll('nav a[data-section]').forEach(a=>a.classList.toggle('active',a.dataset.section===section));
-    if(pushHash){const next='#'+section;if(location.hash!==next)history.replaceState(null,'',next)}
-    if(doRefresh&&section!=='dashboard')setTimeout(()=>refresh(section),0);
-  }
-
-  function installNavigation(){
-    document.addEventListener('click',e=>{
-      const link=e.target.closest('a[data-section]');if(!link)return;
-      const section=link.dataset.section;if(!WORKSPACES.concat(['documents','billing','reports']).includes(section))return;
-      e.preventDefault();e.stopImmediatePropagation();showSection(section,true,false);
-    },true);
-    window.addEventListener('hashchange',()=>{
-      const requested=(location.hash||'#dashboard').slice(1).split('/')[0]||'dashboard';
-      showSection(['dashboard','quotes','loads','customers','carriers','brokers','dispatch','documents','billing','reports'].includes(requested)?requested:'dashboard',false,false);
-    });
-  }
-
-  function hideLegacy(){
-    if($('mightDashboardLegacyStyle'))return;
-    const s=document.createElement('style');s.id='mightDashboardLegacyStyle';
-    s.textContent='#dashboard>.stats,#dashboard>#mightOverview,#dashboard>#dashboardV2{display:none!important}';document.head.appendChild(s);
-  }
-
-  function gateApp(){
-    if($('mightAdminBootStyle'))return;
-    const s=document.createElement('style');s.id='mightAdminBootStyle';
-    s.textContent='#appView.might-booting{visibility:hidden!important;opacity:0!important}';document.head.appendChild(s);
-    $('appView')?.classList.add('might-booting');
-  }
-
-  function releaseApp(){
-    $('appView')?.classList.remove('might-booting');
-  }
-
-  async function init(){
-    gateApp();hideLegacy();
-    const profile=await getProfile();
-    const isAdmin=profile?.role==='admin'&&profile?.access_level==='administrator'&&profile?.is_active!==false;
-    const isDispatcher=profile?.access_level==='dispatcher'&&profile?.is_active!==false;
-    window.mightBusinessSwitcherAllowed=isAdmin;
-    window.mightAdminProfile=profile||null;
-
-    if(!isAdmin&&!isDispatcher){releaseApp();return}
-
-    // Only load the code needed for the first screen. The old performance dashboard,
-    // theme and dispatch/billing/report bundles are intentionally not part of boot.
-    await loadEnhancements();
-    if(window.refreshMightDashboard)window.refreshMightDashboard=()=>{};
-
-    if(isAdmin){
-      await loadWelcome();
-      document.body.classList.add('might-admin-ready');
-    }
-
-    normalize();installNavigation();window.mightAdminRouter={showSection};
-    const requested=(location.hash||'#dashboard').slice(1).split('/')[0]||'dashboard';
-    const resolved=isDispatcher?'dispatch':(['dashboard','quotes','loads','customers','carriers','brokers'].includes(requested)?requested:'dashboard');
-
-    // Make the requested workspace visible before starting non-critical background work.
-    await showSection(resolved,false,false);
-    releaseApp();
-
-    // Brokerage/dispatch extensions are loaded only after the shell is usable.
-    if(isAdmin)setTimeout(()=>loadSwitcher().catch(console.error),0);
-    if(isAdmin)setTimeout(()=>loadBrokerage().catch(console.error),900);
-    if(isDispatcher)setTimeout(()=>loadDispatch().catch(console.error),0);
-  }
-
+  function normalize(){const main=document.querySelector('main.main');if(!main)return;const quotes=$('quotes');if(quotes&&quotes.parentElement!==main)main.appendChild(quotes);const dispatch=$('dispatch');if(dispatch&&dispatch.parentElement!==main)main.appendChild(dispatch)}
+  function title(section){const titles={dashboard:'Operations Dashboard',quotes:'Quote Requests',loads:'Load Management',customers:'Customer Management',carriers:'Carrier Management',brokers:'Broker Management',dispatch:'Dispatch Operations',documents:'Documents',billing:'Billing',reports:'Reports'};if($('pageTitle'))$('pageTitle').textContent=titles[section]||'Operations Dashboard'}
+  function workspace(section){normalize();for(const id of WORKSPACES.concat(['documents','billing','reports'])){const el=$(id);if(!el)continue;el.classList.toggle('hidden',id!==section);el.setAttribute('data-might-active',id===section?'true':'false')}title(section)}
+  function refresh(section){const ids={quotes:'refresh',loads:'loadRefresh',customers:'customerRefresh',carriers:'carrierRefresh',brokers:'brokerRefresh',documents:'docRefresh',billing:'billingRefresh',reports:'reportRefresh'};const id=ids[section];if(id)$(id)?.click()}
+  async function showSection(section,pushHash=false,doRefresh=false){if(window.mightDispatcherRestricted&&section!=='dispatch')section='dispatch';if(!window.mightBusinessSwitcherAllowed&&section==='dispatch')section='dashboard';if(['documents','billing','reports'].includes(section))await loadBrokerage();if(section==='dispatch')await loadDispatch();workspace(section);document.querySelectorAll('nav a[data-section]').forEach(a=>a.classList.toggle('active',a.dataset.section===section));if(pushHash){const next='#'+section;if(location.hash!==next)history.replaceState(null,'',next)}if(doRefresh&&section!=='dashboard')setTimeout(()=>refresh(section),0)}
+  function installNavigation(){document.addEventListener('click',e=>{const link=e.target.closest('a[data-section]');if(!link)return;const section=link.dataset.section;if(!WORKSPACES.concat(['documents','billing','reports']).includes(section))return;e.preventDefault();e.stopImmediatePropagation();showSection(section,true,false)},true);window.addEventListener('hashchange',()=>{const requested=(location.hash||'#dashboard').slice(1).split('/')[0]||'dashboard';showSection(['dashboard','quotes','loads','customers','carriers','brokers','dispatch','documents','billing','reports'].includes(requested)?requested:'dashboard',false,false)})}
+  function hideLegacy(){if($('mightDashboardLegacyStyle'))return;const s=document.createElement('style');s.id='mightDashboardLegacyStyle';s.textContent='#dashboard>.stats,#dashboard>#mightOverview,#dashboard>#dashboardV2{display:none!important}';document.head.appendChild(s)}
+  function gateApp(){if($('mightAdminBootStyle'))return;const s=document.createElement('style');s.id='mightAdminBootStyle';s.textContent='#appView.might-booting{visibility:hidden!important;opacity:0!important}';document.head.appendChild(s);$('appView')?.classList.add('might-booting')}
+  function releaseApp(){document.body.classList.add('might-portal-ready');$('appView')?.classList.remove('might-booting')}
+  async function init(){gateApp();hideLegacy();const profile=await getProfile();const isAdmin=profile?.role==='admin'&&profile?.access_level==='administrator'&&profile?.is_active!==false;const isDispatcher=profile?.access_level==='dispatcher'&&profile?.is_active!==false;window.mightBusinessSwitcherAllowed=isAdmin;window.mightAdminProfile=profile||null;if(!isAdmin&&!isDispatcher){releaseApp();return}await loadEnhancements();if(window.refreshMightDashboard)window.refreshMightDashboard=()=>{};if(isAdmin){await loadWelcome();document.body.classList.add('might-admin-ready')}normalize();installNavigation();window.mightAdminRouter={showSection};const requested=(location.hash||'#dashboard').slice(1).split('/')[0]||'dashboard';const resolved=isDispatcher?'dispatch':(['dashboard','quotes','loads','customers','carriers','brokers'].includes(requested)?requested:'dashboard');await showSection(resolved,false,false);releaseApp();if(isAdmin)setTimeout(()=>loadSwitcher().catch(console.error),2000);if(isDispatcher)setTimeout(()=>loadDispatch().catch(console.error),0)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
