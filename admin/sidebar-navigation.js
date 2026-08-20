@@ -1,0 +1,152 @@
+(function(){
+  if(window.mightSidebarNavigationLoaded)return;
+  window.mightSidebarNavigationLoaded=true;
+
+  const groups={
+    brokerage:[
+      {label:'Quote Requests',section:'quotes'},
+      {label:'Loads',section:'loads'},
+      {label:'Customers',section:'customers'},
+      {label:'Carriers',section:'carriers'}
+    ],
+    dispatch:[
+      {label:'Load Details',section:'dispatch',view:'loads'},
+      {label:'Assigned Carriers',section:'dispatch',view:'fleet'},
+      {label:'Documents',section:'documents'},
+      {label:'Report Issues',section:'dispatch',view:'issues'}
+    ]
+  };
+
+  const iconChevron=()=>'<span class="might-nav-chevron" aria-hidden="true">⌄</span>';
+
+  function item(label,section,view){
+    const a=document.createElement('a');
+    a.href='#'+section+(view?'/'+view:'');
+    a.dataset.section=section;
+    if(view)a.dataset.dispatchView=view;
+    a.className='might-nav-child';
+    a.innerHTML='<span>'+label+'</span>';
+    return a;
+  }
+
+  function group(label,key){
+    const wrap=document.createElement('div');
+    wrap.className='might-nav-group';
+    wrap.dataset.navGroup=key;
+    const button=document.createElement('button');
+    button.type='button';
+    button.className='might-nav-group-toggle';
+    button.setAttribute('aria-expanded','true');
+    button.innerHTML='<span>'+label+'</span>'+iconChevron();
+    const children=document.createElement('div');
+    children.className='might-nav-children';
+    groups[key].forEach(x=>children.appendChild(item(x.label,x.section,x.view)));
+    button.addEventListener('click',()=>{
+      const open=button.getAttribute('aria-expanded')==='true';
+      button.setAttribute('aria-expanded',String(!open));
+      wrap.classList.toggle('is-collapsed',open);
+    });
+    wrap.append(button,children);
+    return wrap;
+  }
+
+  function install(){
+    const nav=document.querySelector('.sidebar nav');
+    if(!nav||nav.dataset.mightNavInstalled==='true')return false;
+    nav.dataset.mightNavInstalled='true';
+    nav.innerHTML='';
+
+    const overview=document.createElement('a');
+    overview.className='active might-nav-overview';
+    overview.href='#dashboard';
+    overview.dataset.section='dashboard';
+    overview.textContent='Overview';
+    nav.appendChild(overview);
+    nav.appendChild(group('Brokerage','brokerage'));
+    nav.appendChild(group('Dispatch','dispatch'));
+
+    const employee=document.createElement('a');
+    employee.href='#employee-central';
+    employee.dataset.section='employee-central';
+    employee.className='might-nav-standalone';
+    employee.textContent='Employee Central';
+    nav.appendChild(employee);
+
+    if(!document.getElementById('mightSidebarNavStyle')){
+      const style=document.createElement('style');
+      style.id='mightSidebarNavStyle';
+      style.textContent=`
+        .sidebar nav{display:flex;flex-direction:column;gap:4px}
+        .sidebar nav>a,.might-nav-group-toggle{width:100%;box-sizing:border-box}
+        .might-nav-group-toggle{display:flex;align-items:center;justify-content:space-between;border:0;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer}
+        .might-nav-chevron{font-size:15px;line-height:1;transition:transform .18s ease;opacity:.7}
+        .might-nav-group.is-collapsed .might-nav-chevron{transform:rotate(-90deg)}
+        .might-nav-group.is-collapsed .might-nav-children{display:none}
+        .might-nav-children{display:flex;flex-direction:column;gap:3px;padding:2px 0 6px 13px}
+        .sidebar nav .might-nav-child{font-size:13px;padding:9px 12px;color:#6d7d8f;border-radius:8px;text-decoration:none}
+        .sidebar nav .might-nav-child:hover{background:#f1f6fa;color:#243447}
+        .sidebar nav .might-nav-child.active{background:#eaf3fa;color:#176fbe;font-weight:700}
+        .sidebar nav .might-nav-group-toggle{padding:10px 12px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#7a8998}
+        .sidebar nav .might-nav-group-toggle:hover{color:#243447}
+        .sidebar nav .might-nav-standalone{margin-top:8px}
+      `;
+      document.head.appendChild(style);
+    }
+    return true;
+  }
+
+  function dispatchView(view){
+    if(view==='issues'){
+      const root=document.getElementById('dispatch');
+      if(!root)return;
+      const host=root.querySelector('#dispatchWorkspaceHost');
+      if(host){
+        host.innerHTML='<section class="dw-panel"><header class="dw-header"><div><div class="dw-kicker">DISPATCH SUPPORT</div><h1>Report Issues</h1><p>Capture an operational issue for the dispatch team.</p></div></header><div style="padding:20px;display:grid;gap:14px;max-width:720px"><label>Issue type<select id="mightIssueType"><option>Load issue</option><option>Carrier issue</option><option>Customer issue</option><option>Dispatcher issue</option><option>Other</option></select></label><label>Description<textarea id="mightIssueDescription" rows="6" placeholder="Describe what happened and what needs attention..."></textarea></label><button class="primary" type="button" id="mightSubmitIssue">Submit Issue</button><div id="mightIssueMessage" class="muted"></div></div></section>';
+        document.getElementById('pageTitle')?.replaceChildren(document.createTextNode('Report Issues'));
+        document.getElementById('mightSubmitIssue')?.addEventListener('click',()=>{
+          const msg=document.getElementById('mightIssueMessage');
+          const desc=document.getElementById('mightIssueDescription')?.value.trim();
+          if(!desc){if(msg)msg.textContent='Please describe the issue before submitting.';return;}
+          if(msg)msg.textContent='Issue captured. Connect this form to your issue table/workflow when ready.';
+        });
+      }
+      return;
+    }
+    const trigger=document.querySelector('#dispatch [data-k="'+view+'"], #dispatch [data-jump="'+view+'"]');
+    trigger?.click();
+  }
+
+  function setActive(section,view){
+    document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.toggle('active',a.dataset.section===section && (!view || a.dataset.dispatchView===view)));
+    document.querySelectorAll('.sidebar nav .might-nav-group').forEach(g=>{
+      const active=g.querySelector('a.active');
+      if(active){g.classList.remove('is-collapsed');g.querySelector('.might-nav-group-toggle')?.setAttribute('aria-expanded','true');}
+    });
+  }
+
+  function installNavigation(){
+    if(window.mightSidebarNavigationClicksInstalled)return;
+    window.mightSidebarNavigationClicksInstalled=true;
+    document.addEventListener('click',async e=>{
+      const a=e.target.closest('.sidebar nav a[data-section]');
+      if(!a||!window.mightAdminRouter?.showSection)return;
+      const section=a.dataset.section;
+      const view=a.dataset.dispatchView||'';
+      e.preventDefault();e.stopImmediatePropagation();
+      setActive(section,view);
+      await window.mightAdminRouter.showSection(section,true);
+      if(section==='dispatch'&&view)dispatchView(view);
+    },true);
+  }
+
+  function init(){
+    if(!install())return;
+    installNavigation();
+    const current=(location.hash||'#dashboard').slice(1).split('/');
+    if(current[0]==='dispatch'&&current[1])setTimeout(()=>dispatchView(current[1]),250);
+    else setActive(current[0]||'dashboard',current[1]||'');
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+  window.mightSidebarNavigation={init,setActive,dispatchView};
+})();
