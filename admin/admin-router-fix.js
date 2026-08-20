@@ -24,7 +24,7 @@
       const {data:{user}}=await db.auth.getUser();
       if(!user)return null;
       const {data:p}=await db.from('employee_profiles')
-        .select('role,access_level,is_active')
+        .select('id,role,access_level,is_active,full_name,email')
         .eq('id',user.id)
         .maybeSingle();
       return p||null;
@@ -36,7 +36,8 @@
 
   const loadEnhancements=()=>loadScript('enhancements.js?v=8','mightEnhancementsLoaded');
   const loadDashboardV2=()=>loadScript('dashboard-v2.js?v=3','mightDashboardV2Loaded');
-  const loadDashboardTheme=()=>loadScript('dashboard-theme.js?v=1','mightDashboardThemeLoaded');
+  const loadDashboardTheme=()=>loadScript('dashboard-theme.js?v=2','mightDashboardThemeLoaded');
+  const loadAdminWelcome=()=>loadScript('admin-welcome.js?v=1','mightAdminWelcomeLoaded');
   const loadDispatchAdmin=()=>loadScript('dispatch-v2.js?v=10','mightDispatchV2Loaded');
   const loadDispatcherAccess=()=>loadScript('dispatcher-access.js?v=4','mightDispatcherAccessLoaded');
   const loadBusinessSwitcher=()=>loadScript('business-switcher.js?v=11','mightBusinessSwitcherLoaded');
@@ -92,6 +93,7 @@
       refreshSection(section);
     }else if(section==='dashboard'){
       setTimeout(()=>window.refreshMightDashboard?.(true),80);
+      setTimeout(()=>window.mightAdminWelcomeRefresh?.(),120);
     }
   }
 
@@ -131,6 +133,10 @@
     const isDispatcher=profile?.access_level==='dispatcher' && profile?.is_active!==false;
 
     window.mightBusinessSwitcherAllowed=isAdmin;
+
+    if(isAdmin){
+      await loadAdminWelcome();
+    }
 
     if(isAdmin||isDispatcher){
       await loadDispatchAdmin();
