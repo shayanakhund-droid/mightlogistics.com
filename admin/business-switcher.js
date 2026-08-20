@@ -38,8 +38,8 @@
       #businessSwitcher .dispatch-subnav a:hover{background:#0c263b!important;color:#fff!important}
       #businessSwitcher .dispatch-subnav a.active{background:#102f48!important;color:#fff!important}
       body.biz-dispatch-mode .portal-label{display:none}
-      body.biz-dispatch-mode aside.sidebar nav>a{display:none!important}
-      body.biz-dispatch-mode aside.sidebar nav>a[data-section="dashboard"],body.biz-dispatch-mode aside.sidebar nav>a[data-section="quotes"],body.biz-dispatch-mode aside.sidebar nav>a[data-section="loads"],body.biz-dispatch-mode aside.sidebar nav>a[data-section="customers"],body.biz-dispatch-mode aside.sidebar nav>a[data-section="carriers"],body.biz-dispatch-mode aside.sidebar nav>a[data-section="brokers"]{display:none!important}
+      body.biz-dispatch-mode aside.sidebar nav{display:none!important}
+      body.biz-dispatch-mode aside.sidebar .brokerage-subnav{display:none!important}
       body.biz-dispatch-mode #dispatch{animation:bizDispatchIn .2s ease}
       @keyframes bizDispatchIn{from{opacity:.2;transform:translateY(4px)}to{opacity:1;transform:none}}
     `;
