@@ -7,20 +7,32 @@
 
   async function refreshProfile(){
     const id=loadId();if(!id)return;
-    const{data:l,error}=await db.from('loads').select('assigned_employee').eq('id',id).maybeSingle();
-    if(error||!l?.assigned_employee){profile=null;profileLoadId=id;return}
-    const{data:p}=await db.from('employee_profiles').select('id,full_name,email,phone').eq('id',l.assigned_employee).maybeSingle();
-    profile=p||null;profileLoadId=id;
+    const{data:l,error:loadError}=await db.from('loads')
+      .select('assigned_employee')
+      .eq('id',id)
+      .limit(1)
+      .maybeSingle();
+    if(loadError||!l?.assigned_employee){profile=null;profileLoadId=id;return}
+    const{data:p,error:profileError}=await db.from('employee_profiles')
+      .select('id,full_name,email,phone')
+      .eq('id',l.assigned_employee)
+      .limit(1)
+      .maybeSingle();
+    if(profileError){console.warn('Assigned broker profile lookup failed:',profileError);profile=null;}
+    else profile=p||null;
+    profileLoadId=id;
     window.mightAssignedBrokerProfile=profile;
   }
+
   function decorate(content,p=profile){
     if(typeof content!=='string'||!p)return content;
     const rows=`<div class="kv"><span>Broker Name</span><b>${esc(p.full_name||'—')}</b></div><div class="kv"><span>Broker Email</span><b>${esc(p.email||'—')}</b></div><div class="kv"><span>Broker Phone</span><b>${esc(p.phone||'—')}</b></div>`;
-    let out=content.replace(/<div class="kv"><span>Broker Name<\/span><b>[\s\S]*?<\/b><\/div><div class="kv"><span>Broker Email<\/span><b>[\s\S]*?<\/b><\/div><div class="kv"><span>Broker Phone<\/span><b>[\s\S]*?<\/b><\/div>/g,'');
+    let out=content.replace(/<div class="kv"><span>Broker Name<\/span><b>[\s\S]*?<\/b><\/div><div class="kv"><span>Broker Email<\/span><b>[\s\S]*?<\/b></div><div class="kv"><span>Broker Phone<\/span><b>[\s\S]*?<\/b><\/div>/g,'');
     const old='<div class="kv"><span>Broker</span><b>Might Logistics</b></div>';
     if(out.includes(old))out=out.replace(old,old+rows);
     return out;
   }
+
   function patchBlob(){
     if(patchedBlob)return;
     const NativeBlob=window.Blob;if(!NativeBlob)return;
@@ -34,13 +46,14 @@
     }
     window.Blob=BrokerBlob;patchedBlob=true;
   }
+
   function patchDocuments(){
     if(patchedDocs)return;
     try{
       const proto=Object.getPrototypeOf(db.from('load_documents'));if(!proto)return;
       const oi=proto.insert,ou=proto.update;
       function patchValues(values){
-        const one=v=>{if(!v||v.document_type!=='rate_confirmation'||!v.content)return v;const content=decorate(v.content);return {...v,content,file_size:new Blob([content]).size,updated_at:new Date().toISOString()}};
+        const one=v=>{if(!v||v.document_type!=='rate_confirmation'||!v.content)return v;const content=decorate(v.content);return {...v,content,file_size:new NativeBlob([content]).size,updated_at:new Date().toISOString()}};
         return Array.isArray(values)?values.map(one):one(values);
       }
       proto.insert=function(values,...args){return oi.call(this,patchValues(values),...args)};
@@ -48,6 +61,7 @@
       proto.__mightRateconBrokerPatched=true;patchedDocs=true;
     }catch(e){console.error('Rate confirmation document patch failed:',e)}
   }
+
   function init(){
     patchBlob();patchDocuments();
     document.addEventListener('click',e=>{if(e.target?.id==='createLoad'||e.target?.closest?.('.load-view'))setTimeout(refreshProfile,100)});
