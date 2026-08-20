@@ -9,7 +9,30 @@
   async function loadBrokers(){const rows=$('brokerRows');if(!rows)return;const{data,error}=await db.from('employee_profiles').select('id,full_name,email,phone,access_level,is_active').eq('access_level','broker').order('full_name');if(error){rows.innerHTML='<tr><td colspan="4" class="empty">Could not load brokers.</td></tr>';return}profiles=data||[];rows.innerHTML=profiles.map(p=>`<tr><td><strong>${esc(p.full_name||'—')}</strong></td><td>${esc(p.email||'—')}</td><td>${esc(p.phone||'—')}</td><td><span class="status ${p.is_active?'active':'inactive'}">${p.is_active?'Active':'Inactive'}</span></td></tr>`).join('')||'<tr><td colspan="4" class="empty">No broker profiles yet.</td></tr>';}
   function openBrokerModal(){const m=$('brokerModal');if(!m)return;$('brokerForm').reset();$('brokerMessage').textContent='';m.classList.remove('hidden');}
   function closeBrokerModal(){$('brokerModal')?.classList.add('hidden');}
-  async function createBroker(e){e.preventDefault();const msg=$('brokerMessage');msg.textContent='Creating secure login…';const{data,error}=await db.functions.invoke('create-broker-user',{body:{full_name:$('brokerName').value.trim(),email:$('brokerEmail').value.trim(),phone:$('brokerPhone').value.trim(),password:$('brokerPassword').value}});if(error||data?.error){msg.textContent=data?.error||error?.message||'Could not create broker.';return}msg.textContent='Broker created successfully. They can now sign in with the email and password you entered.';await loadBrokers();setTimeout(closeBrokerModal,900);}
+  async function createBroker(e){
+    e.preventDefault();
+    const msg=$('brokerMessage');
+    const email=$('brokerEmail').value.trim().toLowerCase();
+    msg.textContent='Creating secure login…';
+    try{
+      const{data,error}=await db.functions.invoke('create-broker-user',{body:{full_name:$('brokerName').value.trim(),email,phone:$('brokerPhone').value.trim(),password:$('brokerPassword').value}});
+      if(error){
+        let detail='';
+        try{if(error.context){const payload=await error.context.clone().json();detail=payload?.error||payload?.message||'';}}catch{}
+        const text=detail||error.message||'Could not create broker.';
+        msg.textContent=text;
+        console.error('create-broker-user failed',error,detail);
+        return;
+      }
+      if(data?.error){msg.textContent=data.error;return;}
+      msg.textContent='Broker created successfully. They can now sign in with the email and password you entered.';
+      await loadBrokers();
+      setTimeout(closeBrokerModal,900);
+    }catch(err){
+      console.error('create-broker-user exception',err);
+      msg.textContent=err?.message||'Could not create broker.';
+    }
+  }
   function setupLoadBrokerFields(){const form=$('loadForm'),grid=form?.querySelector('.loads-form-grid');if(!form||!grid)return;let label=$('load_brokerId')?.closest('label');if(!label){label=document.createElement('label');label.className='loads-full';label.innerHTML='Broker / Account Executive<select id="load_brokerId"></select>';const marker=grid.querySelector('.loads-form-section');grid.insertBefore(label,marker||grid.firstChild);}populateBrokerSelect();const hydrate=async()=>{const id=form.dataset.id;if(!id){lastLoadHydrated='';if($('load_brokerId'))$('load_brokerId').value=currentUser?.id||'';return}if(lastLoadHydrated===id)return;const{data}=await db.from('loads').select('assigned_employee,pickup_time_from,pickup_time_to,delivery_time_from,delivery_time_to').eq('id',id).maybeSingle();if(!data)return;lastLoadHydrated=id;if($('load_brokerId'))$('load_brokerId').value=data.assigned_employee||'';const map={pickup_time_from:'pickupTimeFrom',pickup_time_to:'pickupTimeTo',delivery_time_from:'deliveryTimeFrom',delivery_time_to:'deliveryTimeTo'};Object.keys(map).forEach(k=>{const el=$('load_'+map[k]);if(el)el.value=data[k]||''});};
     document.addEventListener('click',e=>{if(e.target?.id==='createLoad'){lastLoadHydrated='';setTimeout(()=>{populateBrokerSelect();if($('load_brokerId'))$('load_brokerId').value=currentUser?.id||''},100)}const view=e.target?.closest?.('.load-view');if(view){lastLoadHydrated='';setTimeout(hydrate,180);}});setInterval(()=>{if(!$('loadModal')?.classList.contains('hidden'))hydrate()},500);
     form.addEventListener('submit',()=>{const startedAt=new Date().toISOString(),origin=$('load_origin')?.value.trim(),destination=$('load_destination')?.value.trim(),broker=$('load_brokerId')?.value||currentUser?.id||null,times={pickup_time_from:$('load_pickupTimeFrom')?.value.trim()||null,pickup_time_to:$('load_pickupTimeTo')?.value.trim()||null,delivery_time_from:$('load_deliveryTimeFrom')?.value.trim()||null,delivery_time_to:$('load_deliveryTimeTo')?.value.trim()||null};setTimeout(async()=>{let id=form.dataset.id;if(!id){const{data}=await db.from('loads').select('id').gte('created_at',startedAt).eq('origin',origin).eq('destination',destination).order('created_at',{ascending:false}).limit(1).maybeSingle();id=data?.id||null}if(!id)return;await db.from('loads').update({...times,assigned_employee:broker,updated_at:new Date().toISOString()}).eq('id',id);},850);});}
