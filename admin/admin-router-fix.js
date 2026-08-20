@@ -12,16 +12,13 @@
   const loadDispatch=()=>Promise.allSettled([loadScript('dispatch-v2.js?v=12','mightDispatchV2Loaded'),loadScript('dispatcher-access.js?v=5','mightDispatcherAccessLoaded'),loadScript('dispatch-workspaces.js?v=2','mightDispatchWorkspacesLoaded')]);
   const loadEmployeeCentral=()=>loadScript('employee-central.js?v=2','mightEmployeeCentralLoaded');
   const loadAttendance=()=>loadScript('attendance-gate.js?v=2','mightAttendanceGateLoaded');
-  const loadPerformance=()=>loadScript('performance-data-v2.js?v=2','mightPerformanceV2');
+  const loadPerformance=()=>loadScript('performance-data-v2.js?v=3','mightPerformanceV2');
   const loadPerformanceRoute=()=>loadScript('performance-route-v2.js?v=2','mightPerformanceRouteV2');
   const loadPerformanceDetail=()=>loadScript('performance-detail-v2.js?v=2','mightPerformanceDetailV2');
   function normalize(){const main=document.querySelector('main.main');if(!main)return;const q=$('quotes');if(q&&q.parentElement!==main)main.appendChild(q);const d=$('dispatch');if(d&&d.parentElement!==main)main.appendChild(d);const ec=$('employee-central');if(ec&&ec.parentElement!==main)main.appendChild(ec)}
   function title(s){const m={dashboard:'Operations Dashboard',quotes:'Quote Requests',loads:'Load Management',customers:'Customer Management',carriers:'Carrier Management',brokers:'Broker Management',dispatch:'Dispatch Operations','employee-central':'Employee Central',documents:'Documents',billing:'Billing',reports:'Reports'};if($('pageTitle'))$('pageTitle').textContent=m[s]||'Operations Dashboard'}
   function workspace(s){normalize();for(const id of WORKSPACES.concat(['documents','billing','reports']))$(id)?.classList.toggle('hidden',id!==s);title(s)}
   function refreshDataForWorkspace(s){
-    // The router intercepts sidebar clicks during capture, so the legacy workspace
-    // click handlers never receive the event. Trigger their existing refresh
-    // controls explicitly instead of duplicating their Supabase query logic.
     if(s==='customers')$('customerRefresh')?.click();
     else if(s==='loads')$('loadRefresh')?.click();
     else if(s==='carriers')$('carrierRefresh')?.click();
