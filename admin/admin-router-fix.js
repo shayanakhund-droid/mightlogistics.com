@@ -16,7 +16,7 @@
   function loadEnhancements(){return loadScript('enhancements.js?v=8','mightEnhancementsLoaded')}
   function loadDashboardV2(){return loadScript('dashboard-v2.js?v=3','mightDashboardV2Loaded')}
   function loadDashboardTheme(){return loadScript('dashboard-theme.js?v=1','mightDashboardThemeLoaded')}
-  function loadDispatchAdmin(){return loadScript('dispatch-v2.js?v=2','mightDispatchV2Loaded')}
+  function loadDispatchAdmin(){return loadScript('dispatch-v3.js?v=1','mightDispatchV3Loaded')}
   function loadDispatcherAccess(){return loadScript('dispatcher-access.js?v=3','mightDispatcherAccessLoaded')}
   function loadBusinessSwitcher(){return loadScript('business-switcher.js?v=5','mightBusinessSwitcherLoaded')}
 
@@ -50,36 +50,16 @@
 
   function showSection(section,pushHash){
     if(window.mightDispatcherRestricted&&section!=='dispatch')section='dispatch';
-
     moveQuotesOutOfDashboard();
     hideAll();
-
     if(section==='dispatch')window.initMightDispatchV2?.();
-
     const target=document.getElementById(section);
     if(target)target.classList.remove('hidden');
-
-    document.querySelectorAll('nav a[data-section]').forEach(a=>{
-      a.classList.toggle('active',a.dataset.section===section);
-    });
-
-    const titles={
-      dashboard:'Operations Dashboard',
-      quotes:'Quote Requests',
-      loads:'Load Management',
-      customers:'Customer Management',
-      carriers:'Carrier Management',
-      brokers:'Broker Management',
-      dispatch:'Dispatch Operations'
-    };
+    document.querySelectorAll('nav a[data-section]').forEach(a=>a.classList.toggle('active',a.dataset.section===section));
+    const titles={dashboard:'Operations Dashboard',quotes:'Quote Requests',loads:'Load Management',customers:'Customer Management',carriers:'Carrier Management',brokers:'Broker Management',dispatch:'Dispatch Operations'};
     const title=document.getElementById('pageTitle');
     if(title)title.textContent=titles[section]||'Operations Dashboard';
-
-    if(pushHash){
-      const next='#'+section;
-      if(location.hash!==next)history.replaceState(null,'',next);
-    }
-
+    if(pushHash){const next='#'+section;if(location.hash!==next)history.replaceState(null,'',next)}
     if(section!=='dashboard'&&section!=='dispatch')refreshSection(section);
     if(section==='dashboard')setTimeout(()=>window.refreshMightDashboard?.(true),80);
   }
@@ -92,48 +72,25 @@
     await loadDispatchAdmin();
     await loadDispatcherAccess();
     await loadBusinessSwitcher();
-
     moveQuotesOutOfDashboard();
     hideLegacyDashboard();
-
-    // The business switcher is the single source of truth for Brokerage vs Dispatch.
-    // Do not create a second workspace switcher here.
     window.initMightDispatchV2?.();
-
     document.addEventListener('click',function(e){
       const link=e.target.closest?.('nav a[data-section]');
       if(!link)return;
-
       if(window.mightDispatcherRestricted&&link.dataset.section!=='dispatch'){
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        showSection('dispatch',true);
-        window.mightBusinessSwitcher?.switchBusiness?.('dispatch');
-        return;
+        e.preventDefault();e.stopImmediatePropagation();showSection('dispatch',true);window.mightBusinessSwitcher?.switchBusiness?.('dispatch');return;
       }
-
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      const section=link.dataset.section;
-      showSection(section,true);
-
+      e.preventDefault();e.stopImmediatePropagation();
+      const section=link.dataset.section;showSection(section,true);
       if(section==='dispatch')window.mightBusinessSwitcher?.switchBusiness?.('dispatch');
       else window.mightBusinessSwitcher?.switchBusiness?.('brokerage');
     },true);
-
     const initial=(location.hash||'#dashboard').slice(1);
     const resolved=window.mightDispatcherRestricted?'dispatch':(document.getElementById(initial)?initial:'dashboard');
-
     window.mightAdminRouter={showSection};
-
-    if(resolved==='dispatch'){
-      showSection('dispatch',false);
-      setTimeout(()=>window.mightBusinessSwitcher?.switchBusiness?.('dispatch'),150);
-    }else{
-      showSection(resolved,false);
-      setTimeout(()=>window.mightBusinessSwitcher?.switchBusiness?.('brokerage'),150);
-    }
+    if(resolved==='dispatch'){showSection('dispatch',false);setTimeout(()=>window.mightBusinessSwitcher?.switchBusiness?.('dispatch'),150)}
+    else{showSection(resolved,false);setTimeout(()=>window.mightBusinessSwitcher?.switchBusiness?.('brokerage'),150)}
   }
-
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
