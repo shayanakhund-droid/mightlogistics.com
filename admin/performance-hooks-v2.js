@@ -1,0 +1,5 @@
+(function(){
+  const $=id=>document.getElementById(id);
+  const load=()=>{if(!window.mightPerformanceV2)return;const run=()=>{const s=location.hash.replace('#','').split('/')[0];if(s==='quotes')window.dispatchEvent(new CustomEvent('might:quotes'));if(s==='loads')window.dispatchEvent(new CustomEvent('might:loads'));if(s==='customers')window.dispatchEvent(new CustomEvent('might:customers'));if(s==='carriers')window.dispatchEvent(new CustomEvent('might:carriers'))};new MutationObserver(run).observe(document.body,{subtree:true,attributes:true,attributeFilter:['data-might-active','class']});document.addEventListener('click',e=>{const b=e.target.closest('#refresh,#loadRefresh,#customerRefresh,#carrierRefresh');if(!b)return;e.preventDefault();e.stopImmediatePropagation();const id=b.id;window.dispatchEvent(new CustomEvent('might:'+({refresh:'quotes',loadRefresh:'loads',customerRefresh:'customers',carrierRefresh:'carriers'}[id]||'')))},true)};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(load,100));else setTimeout(load,100);
+})();
