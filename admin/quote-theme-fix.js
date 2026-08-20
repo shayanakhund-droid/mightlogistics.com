@@ -1,1 +1,1 @@
-(()=>{if(window.mightQuoteThemeFixLoaded)return;window.mightQuoteThemeFixLoaded=true;const s=document.createElement('style');s.id='mightQuoteThemeFix';s.textContent=`#dashboard.quotes-mode>#dashboardV2{display:none!important}#dashboard.quotes-mode>#quotes{display:block!important}#dashboard.quotes-mode>#quotes.quotes-workspace{display:block!important}#dashboard:not(.quotes-mode)>#quotes{display:none!important}`;document.head.appendChild(s)})();
+(()=>{if(window.mightQuoteThemeFixLoaded)return;window.mightQuoteThemeFixLoaded=true;})();
