@@ -1,0 +1,47 @@
+(function(){
+  function hideAll(){
+    document.querySelectorAll('main .content').forEach(el=>el.classList.add('hidden'));
+  }
+  function moveQuotesOutOfDashboard(){
+    const quotes=document.getElementById('quotes');
+    const dashboard=document.getElementById('dashboard');
+    const main=document.querySelector('main.main');
+    if(quotes && dashboard && main && quotes.parentElement===dashboard){
+      main.insertBefore(quotes, document.getElementById('loads') || null);
+      quotes.classList.add('content','hidden');
+    }
+  }
+  function showSection(section, pushHash){
+    moveQuotesOutOfDashboard();
+    hideAll();
+    const target=document.getElementById(section);
+    if(target) target.classList.remove('hidden');
+    document.querySelectorAll('nav a[data-section]').forEach(a=>a.classList.toggle('active',a.dataset.section===section));
+    const titles={dashboard:'Operations Dashboard',quotes:'Quote Requests',loads:'Load Management',customers:'Customer Management',carriers:'Carrier Management',brokers:'Broker Management'};
+    const title=document.getElementById('pageTitle');
+    if(title) title.textContent=titles[section] || 'Operations Dashboard';
+    if(pushHash){
+      const next=`#${section}`;
+      if(location.hash!==next) history.replaceState(null,'',next);
+    }
+    if(section==='quotes' && typeof window.loadQuotes==='function') window.loadQuotes();
+    if(section==='loads' && typeof window.mightLoads?.loadLoads==='function') window.mightLoads.loadLoads();
+    if(section==='customers' && typeof window.mightCRM?.loadCRM==='function') window.mightCRM.loadCRM();
+    if(section==='carriers' && typeof window.mightCarriers?.loadCarriers==='function') window.mightCarriers.loadCarriers();
+    if(section==='brokers' && typeof window.mightBrokers?.loadBrokers==='function') window.mightBrokers.loadBrokers();
+  }
+  function init(){
+    moveQuotesOutOfDashboard();
+    document.addEventListener('click',function(e){
+      const link=e.target.closest?.('nav a[data-section]');
+      if(!link)return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      showSection(link.dataset.section,true);
+    },true);
+    const initial=(location.hash||'#dashboard').slice(1);
+    showSection(document.getElementById(initial)?initial:'dashboard',false);
+    window.mightAdminRouter={showSection};
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+})();
