@@ -27,8 +27,7 @@
   function installLegacyNavGuard(){
     removeLegacyDispatchNav();
     const nav=document.querySelector('aside.sidebar nav');
-    if(!nav)return;
-    if(window.MIGHT_LEGACY_DISPATCH_GUARD)return;
+    if(!nav||window.MIGHT_LEGACY_DISPATCH_GUARD)return;
     window.MIGHT_LEGACY_DISPATCH_GUARD=true;
     new MutationObserver(removeLegacyDispatchNav).observe(nav,{childList:true,subtree:true});
   }
@@ -40,7 +39,10 @@
     if(window.mightDispatcherRestricted&&section!=='dispatch')section='dispatch';
     if(!window.mightBusinessSwitcherAllowed&&section==='dispatch'&&!window.mightDispatcherRestricted)section='dashboard';
     moveQuotesOutOfDashboard();hideAll();
-    if(section==='dispatch')window.initMightDispatchV2?.();
+    if(section==='dispatch'){
+      window.initMightDispatchV2?.();
+      setTimeout(()=>window.initMightDispatchV2?.(),120);
+    }
     const target=document.getElementById(section);if(target)target.classList.remove('hidden');
     document.querySelectorAll('nav a[data-section]').forEach(a=>a.classList.toggle('active',a.dataset.section===section));
     const titles={dashboard:'Operations Dashboard',quotes:'Quote Requests',loads:'Load Management',customers:'Customer Management',carriers:'Carrier Management',brokers:'Broker Management',dispatch:'Dispatch Operations'};
@@ -62,8 +64,7 @@
     document.addEventListener('click',function(e){
       const link=e.target.closest?.('nav a[data-section]');if(!link)return;
       if((window.mightDispatcherRestricted&&link.dataset.section!=='dispatch')||(!window.mightBusinessSwitcherAllowed&&!window.mightDispatcherRestricted&&link.dataset.section==='dispatch')){e.preventDefault();e.stopImmediatePropagation();showSection(window.mightDispatcherRestricted?'dispatch':'dashboard',true);return}
-      e.preventDefault();e.stopImmediatePropagation();
-      showSection(link.dataset.section,true);
+      e.preventDefault();e.stopImmediatePropagation();showSection(link.dataset.section,true);
     },true);
     const requested=(location.hash||'#dashboard').slice(1);
     const initial=(!isAdmin&&!isDispatcher&&requested==='dispatch')?'dashboard':requested;
