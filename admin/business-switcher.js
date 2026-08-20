@@ -11,7 +11,14 @@
     wrap.querySelectorAll('.dispatch-subnav a').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();showDispatchView(a.dataset.dview)}));
   }
   function switchBusiness(mode){const wrap=document.getElementById('businessSwitcher');if(!wrap)return;wrap.querySelectorAll('.biz-switch button').forEach(b=>b.classList.toggle('active',b.dataset.business===mode));document.body.classList.toggle('biz-dispatch-mode',mode==='dispatch');const sub=document.getElementById('dispatchSubnav');if(sub)sub.classList.toggle('hidden',mode!=='dispatch');if(mode==='dispatch'){window.mightAdminRouter?.showSection('dispatch',false);setTimeout(()=>showDispatchView('overview'),60)}else{window.mightAdminRouter?.showSection('dashboard',false);sub?.querySelectorAll('a').forEach(a=>a.classList.toggle('active',a.dataset.dview==='overview'))}}
-  function showDispatchView(view){const sub=document.getElementById('dispatchSubnav');sub?.querySelectorAll('a').forEach(a=>a.classList.toggle('active',a.dataset.dview===view));if(window.mightDispatchV2?.setView){window.mightDispatchV2.setView(view);return}window.mightAdminRouter?.showSection('dispatch',false)}
+  function showDispatchView(view){
+    const sub=document.getElementById('dispatchSubnav');sub?.querySelectorAll('a').forEach(a=>a.classList.toggle('active',a.dataset.dview===view));
+    const root=document.getElementById('dispatch');if(!root)return;
+    root.querySelectorAll('.dv2-view').forEach(x=>x.classList.add('hidden'));
+    root.querySelectorAll('.dv2-section').forEach(x=>x.classList.toggle('hidden',view!=='overview'));
+    const target=root.querySelector(`.dv2-view[data-view="${view}"]`);if(target)target.classList.remove('hidden');
+    const title=document.getElementById('pageTitle');const titles={overview:'Dispatch Operations',clients:'Dispatch Clients',fleet:'Client Fleet',loads:'Accepted Dispatch Loads',team:'Dispatchers',payments:'Dispatch Payments'};if(title)title.textContent=titles[view]||'Dispatch Operations';
+  }
   function init(){inject()}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else setTimeout(init,0);
   window.mightBusinessSwitcher={switchBusiness,showDispatchView};
