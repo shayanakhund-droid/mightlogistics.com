@@ -3,7 +3,6 @@
   window.mightGmailWorkspaceLoaded=true;
 
   const SUPABASE_URL='https://sowdiflodjxxqrarbisi.supabase.co';
-  const DB=window.mightDb;
   const functions=(name)=>`${SUPABASE_URL}/functions/v1/${name}`;
 
   function mount(){
@@ -27,7 +26,8 @@
   }
 
   async function call(fn,body){
-    const r=await fetch(functions(fn),{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${window.mightDb?.supabaseKey||''}`},body:JSON.stringify(body||{})});
+    const {data:{session}}=await window.mightDb.auth.getSession();
+    const r=await fetch(functions(fn),{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session?.access_token||''}`},body:JSON.stringify(body||{})});
     return r.json();
   }
 
