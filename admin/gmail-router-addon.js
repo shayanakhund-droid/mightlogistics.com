@@ -3,8 +3,6 @@
   if(window.mightGmailRouterAddonLoaded)return;
   window.mightGmailRouterAddonLoaded=true;
 
-  const originalWorkspace = window.mightAdminRouter?.showSection;
-
   function addWorkspace(){
     const nav=document.querySelector('.sidebar nav');
     if(nav && !nav.querySelector('[data-section="gmail"]')){
@@ -26,11 +24,18 @@
         main.appendChild(section);
       }
     }
+
+    return !!document.querySelector('[data-section="gmail"]') && !!document.getElementById('gmail');
   }
+
+  const timer=setInterval(()=>{
+    if(addWorkspace())clearInterval(timer);
+  },500);
 
   function showGmail(){
     document.querySelectorAll('.content').forEach(x=>x.classList.toggle('hidden',x.id!=='gmail'));
-    document.getElementById('pageTitle').textContent='Gmail CRM Integration';
+    const title=document.getElementById('pageTitle');
+    if(title)title.textContent='Gmail CRM Integration';
     window.mightGmailWorkspace?.mount?.();
   }
 
@@ -45,6 +50,4 @@
   window.addEventListener('hashchange',function(){
     if(location.hash==='#gmail')showGmail();
   });
-
-  setTimeout(addWorkspace,1000);
 })();
