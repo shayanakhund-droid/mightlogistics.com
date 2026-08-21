@@ -13,8 +13,6 @@
     if(window.mightSalesAccountDetailActions?.setAccount)window.mightSalesAccountDetailActions.setAccount(id);
     if(window.mightSalesAccountDetail?.setAccountId)window.mightSalesAccountDetail.setAccountId(id);
   }
-  // The account-detail actions module uses a capture listener. Prime its account id
-  // before that listener runs so it never queries sales_accounts with a null UUID.
   document.addEventListener('click',e=>{
     if(e.target.closest('[data-detail-opportunity],#accountAddOpp,#accountAddOpp2,#accountEdit'))primeSalesOpportunityContext();
   },true);
@@ -32,4 +30,18 @@
     }else if($('#refresh'))$('#refresh').click();
   }
   setInterval(refresh,30000);
+  
+  // Might Gmail integration boot hook
+  if(!window.__mightGmailBootstrap){
+    window.__mightGmailBootstrap=true;
+    const loadGmail=()=>{
+      if(document.querySelector('script[src*="bootstrap-gmail.js"]'))return;
+      const s=document.createElement('script');
+      s.src='bootstrap-gmail.js?v=1';
+      s.async=false;
+      document.head.appendChild(s);
+    };
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadGmail);
+    else loadGmail();
+  }
 })();
