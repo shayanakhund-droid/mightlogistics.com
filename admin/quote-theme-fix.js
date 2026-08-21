@@ -1,1 +1,1 @@
-(()=>{if(window.mightQuoteThemeFixLoaded)return;window.mightQuoteThemeFixLoaded=true;const s=document.createElement('script');s.src='sales-account-tasks.js?v=1';s.defer=true;document.head.appendChild(s);})();
+(()=>{if(window.mightQuoteThemeFixLoaded)return;window.mightQuoteThemeFixLoaded=true;const s=document.createElement('script');s.src='sales-account-tasks.js?v=2';s.defer=true;document.head.appendChild(s);})();
