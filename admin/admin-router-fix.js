@@ -10,7 +10,7 @@
   const loadWelcome=()=>loadScript('admin-welcome.js?v=3','mightAdminWelcomeLoaded');
   const loadBrokerage=()=>loadScript('brokerage-admin.js?v=11','mightBrokerageAdminLoaded');
   const loadDispatch=()=>Promise.allSettled([loadScript('dispatch-v2.js?v=12','mightDispatchV2Loaded'),loadScript('dispatcher-access.js?v=5','mightDispatcherAccessLoaded'),loadScript('dispatch-workspaces.js?v=2','mightDispatchWorkspacesLoaded')]);
-  const loadSales=()=>Promise.allSettled([loadScript('sales-role-fix.js?v=1','mightSalesRoleFixLoaded'),loadScript('sales-workspace.js?v=2','mightSalesWorkspaceLoaded'),loadScript('sales-crm-actions.js?v=1','mightSalesCrmActionsLoaded')]);
+  const loadSales=()=>Promise.allSettled([loadScript('sales-role-fix.js?v=1','mightSalesRoleFixLoaded'),loadScript('sales-workspace.js?v=2','mightSalesWorkspaceLoaded'),loadScript('sales-crm-actions.js?v=1','mightSalesCrmActionsLoaded'),loadScript('sales-account-detail.js?v=1','mightSalesAccountDetailLoaded')]);
   const loadEmployeeCentral=()=>loadScript('employee-central.js?v=2','mightEmployeeCentralLoaded');
   const loadAttendance=()=>loadScript('attendance-gate.js?v=2','mightAttendanceGateLoaded');
   const loadPerformance=()=>loadScript('performance-data-v2.js?v=3','mightPerformanceV2');
@@ -18,7 +18,7 @@
   const loadPerformanceDetail=()=>loadScript('performance-detail-v2.js?v=2','mightPerformanceDetailV2');
   const loadSidebarNavigation=()=>loadScript('sidebar-navigation.js?v=3','mightSidebarNavigationLoaded');
   function normalize(){const main=document.querySelector('main.main');if(!main)return;for(const id of ['quotes','dispatch','sales','employee-central']){const el=$(id);if(el&&el.parentElement!==main)main.appendChild(el)}}
-  function title(s,view=''){const salesTitles={'book-of-business':'Book of Business',performance:'Performance Monitor'};const m={dashboard:'Operations Dashboard',quotes:'Quote Requests',loads:'Load Management',customers:'Customer Management',carriers:'Carrier Management',brokers:'Broker Management',dispatch:'Dispatch Operations',sales:salesTitles[view]||'Sales','employee-central':'Employee Central',documents:'Documents',billing:'Billing',reports:'Reports'};if($('pageTitle'))$('pageTitle').textContent=m[s]||'Operations Dashboard'}
+  function title(s,view=''){const salesTitles={'book-of-business':'Book of Business',performance:'Performance Monitor','account-detail':'Account Profile'};const m={dashboard:'Operations Dashboard',quotes:'Quote Requests',loads:'Load Management',customers:'Customer Management',carriers:'Carrier Management',brokers:'Broker Management',dispatch:'Dispatch Operations',sales:salesTitles[view]||'Sales','employee-central':'Employee Central',documents:'Documents',billing:'Billing',reports:'Reports'};if($('pageTitle'))$('pageTitle').textContent=m[s]||'Operations Dashboard'}
   function workspace(s,view=''){normalize();for(const id of WORKSPACES.concat(['documents','billing','reports']))$(id)?.classList.toggle('hidden',id!==s);const q=$('quotes');if(q){const active=s==='quotes';q.classList.toggle('quotes-workspace',active);if(!active)q.style.removeProperty('display')}title(s,view)}
   function refreshDataForWorkspace(s){if(s==='customers')$('customerRefresh')?.click();else if(s==='loads')$('loadRefresh')?.click();else if(s==='carriers')$('carrierRefresh')?.click()}
   async function showSection(s,push=false,view=''){
@@ -35,7 +35,7 @@
     if(s==='sales')await loadSales();
     workspace(s,view);
     if(s==='quotes'){$('quotes')?.classList.remove('hidden');$('quotes')?.classList.add('quotes-workspace');$('quotes')?.style.setProperty('display','block','important')}
-    if(s==='sales')window.mightSalesWorkspace?.show(view||'book-of-business');
+    if(s==='sales'&&view!=='account-detail')window.mightSalesWorkspace?.show(view||'book-of-business');
     document.body.classList.toggle('might-quotes-active',s==='quotes');$('dashboard')?.classList.toggle('quotes-mode',s==='quotes');
     document.querySelectorAll('nav a[data-section]').forEach(a=>a.classList.toggle('active',a.dataset.section===s&&(!view||a.dataset.navView===view||a.dataset.dispatchView===view)));
     if(push){const h='#'+s+(s==='sales'&&view?'/'+view:'');if(location.hash!==h)history.replaceState(null,'',h)}
