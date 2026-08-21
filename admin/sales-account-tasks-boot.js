@@ -1,0 +1,1 @@
+(()=>{let n=0;const boot=()=>{const d=window.mightSalesAccountDetail,t=window.mightSalesAccountTasks;if(!d?.open||!t?.setAccount){if(++n<80)setTimeout(boot,250);return}if(d.open.__taskBootWrapped)return;const original=d.open;const wrapped=async id=>{t.setAccount(id);return original(id)};wrapped.__taskBootWrapped=true;d.open=wrapped};boot()})();
