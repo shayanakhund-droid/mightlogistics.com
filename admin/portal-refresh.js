@@ -30,18 +30,4 @@
     }else if($('#refresh'))$('#refresh').click();
   }
   setInterval(refresh,30000);
-  
-  // Might Gmail integration boot hook
-  if(!window.__mightGmailBootstrap){
-    window.__mightGmailBootstrap=true;
-    const loadGmail=()=>{
-      if(document.querySelector('script[src*="bootstrap-gmail.js"]'))return;
-      const s=document.createElement('script');
-      s.src='bootstrap-gmail.js?v=1';
-      s.async=false;
-      document.head.appendChild(s);
-    };
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadGmail);
-    else loadGmail();
-  }
 })();
