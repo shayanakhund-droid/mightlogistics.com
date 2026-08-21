@@ -10,7 +10,7 @@
   const loadWelcome=()=>loadScript('admin-welcome.js?v=3','mightAdminWelcomeLoaded');
   const loadBrokerage=()=>loadScript('brokerage-admin.js?v=11','mightBrokerageAdminLoaded');
   const loadDispatch=()=>Promise.allSettled([loadScript('dispatch-v2.js?v=12','mightDispatchV2Loaded'),loadScript('dispatcher-access.js?v=5','mightDispatcherAccessLoaded'),loadScript('dispatch-workspaces.js?v=2','mightDispatchWorkspacesLoaded')]);
-  const loadSales=()=>Promise.allSettled([loadScript('sales-role-fix.js?v=1','mightSalesRoleFixLoaded'),loadScript('sales-workspace.js?v=2','mightSalesWorkspaceLoaded')]);
+  const loadSales=()=>Promise.allSettled([loadScript('sales-role-fix.js?v=1','mightSalesRoleFixLoaded'),loadScript('sales-workspace.js?v=2','mightSalesWorkspaceLoaded'),loadScript('sales-crm-actions.js?v=1','mightSalesCrmActionsLoaded')]);
   const loadEmployeeCentral=()=>loadScript('employee-central.js?v=2','mightEmployeeCentralLoaded');
   const loadAttendance=()=>loadScript('attendance-gate.js?v=2','mightAttendanceGateLoaded');
   const loadPerformance=()=>loadScript('performance-data-v2.js?v=3','mightPerformanceV2');
