@@ -1,5 +1,6 @@
 const CONNECT_ENDPOINT = 'might-gmail-oauth-start-v2';
-const DISCONNECT_ENDPOINT = 'might-gmail-disconnect';
+const STATUS_ENDPOINT = 'might-gmail-status-v2';
+const DISCONNECT_ENDPOINT = 'might-gmail-disconnect-v2';
 
 const status = document.getElementById('gmail-status');
 const connectButton = document.getElementById('connect-gmail');
@@ -9,7 +10,7 @@ async function loadGmailStatus() {
   if (!status) return;
 
   try {
-    const response = await fetch('might-gmail-status');
+    const response = await fetch(STATUS_ENDPOINT);
     const data = await response.json();
 
     if (data.connected) {
